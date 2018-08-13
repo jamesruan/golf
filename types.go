@@ -6,6 +6,24 @@ import (
 
 type Level int
 
+func (l Level) String() string {
+	switch l {
+	case DEBUG:
+		return "DBG"
+	case INFO:
+		return "INF"
+	case WARN:
+		return "WRN"
+	case LOG:
+		return "LOG"
+	case ERROR:
+		return "ERR"
+	default:
+		return ""
+	}
+
+}
+
 const (
 	DEBUG Level = iota
 	INFO
@@ -25,10 +43,7 @@ type Event struct {
 	Fields map[string]interface{}
 }
 
-type Filter interface {
-	FilterEvent(event *Event) (pass bool)
-}
-
 type EventLogger interface {
 	Log(event *Event)
+	SetFilter(filter EventFilter)
 }
