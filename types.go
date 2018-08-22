@@ -43,7 +43,21 @@ type Event struct {
 	Fields map[string]interface{}
 }
 
+type Namer interface {
+	Name() string
+}
+
 type EventLogger interface {
+	//Namer
 	Log(event *Event)
 	SetFilter(filter EventFilter)
+}
+
+type EventFilter interface {
+	FilterEvent(*Event) bool
+}
+
+type EventProcessor interface {
+	Namer
+	ProcessEvent(*Event)
 }
