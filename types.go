@@ -56,8 +56,3 @@ type EventLogger interface {
 type EventFilter interface {
 	FilterEvent(*Event) bool
 }
-
-type EventProcessor interface {
-	Namer
-	ProcessEvent(*Event)
-}
