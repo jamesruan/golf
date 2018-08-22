@@ -38,7 +38,6 @@ func newEventSelector(done chan struct{}) *eventSelector {
 
 	go func() {
 		var selected []string
-		var event chan *event.Event = s.ch_event
 		for {
 			select {
 			case <-done:
@@ -51,11 +50,9 @@ func newEventSelector(done chan struct{}) *eventSelector {
 				}
 			case t := <-s.ch_targets:
 				s.targets = t
-			case e := <-event:
-				event = nil
+			case e := <-s.ch_event:
 				selected = s.fun(s.targets, e)
-			case s.ch_selected <- selected:
-				event = s.ch_event
+				s.ch_selected <- selected
 			}
 		}
 	}()

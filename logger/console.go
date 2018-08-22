@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"sync"
 )
 
 var (
@@ -27,11 +28,18 @@ type ConsoleLogger struct {
 	flags ConsoleLoggerFlags
 }
 
+var bufPool = &sync.Pool{
+	New: func() interface{} {
+		buf := make([]byte, 0, 128)
+		return bytes.NewBuffer(buf)
+	},
+}
+
 func (l *ConsoleLogger) Log(e *event.Event) {
 	if l.out == ioutil.Discard {
 		return
 	}
-	b := new(bytes.Buffer)
+	b := bufPool.Get().(*bytes.Buffer)
 
 	if l.flags&CLcolor != 0 {
 		fmt.Fprintf(b, "\x1b[%dm%s\x1b[0m ", l.levelColor(e.Level), e.Level)
@@ -42,14 +50,16 @@ func (l *ConsoleLogger) Log(e *event.Event) {
 	if l.flags&Ldatetime != 0 {
 		Y, M, D := e.Time.Date()
 		h, m, s := e.Time.Clock()
-		fmt.Fprintf(b, "%04d/%02d/%02d %02d:%02d:%02d", Y, M, D, h, m, s)
+		fmt.Fprintf(b, "%04d/%02d/%02d %02d:%02d:%02d ", Y, M, D, h, m, s)
 		if l.flags&Lmicroseconds != 0 {
 			n := e.Time.Nanosecond()
 			fmt.Fprintf(b, ".%03d", n)
 		}
 	}
 
-	fmt.Fprintf(b, "\x1b[97m%s\x1b[0m ", e.Topic)
+	if len(e.Topic) > 0 {
+		fmt.Fprintf(b, "\x1b[97m%s\x1b[0m ", e.Topic)
+	}
 
 	if l.flags&Llongfile != 0 {
 		fmt.Fprintf(b, "%s:%d: ", e.File, e.Line)
@@ -57,9 +67,12 @@ func (l *ConsoleLogger) Log(e *event.Event) {
 		fmt.Fprintf(b, "%s:%d: ", path.Base(e.File), e.Line)
 	}
 
-	fmt.Fprintf(b, e.Fmt+"\n", e.Args...)
+	fmt.Fprintf(b, e.Fmt, e.Args...)
+	b.WriteByte(byte('\n'))
 
 	l.out.Write(b.Bytes())
+	b.Reset()
+	bufPool.Put(b)
 }
 
 func (ConsoleLogger) levelColor(l event.Level) int {

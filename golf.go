@@ -25,12 +25,21 @@ var (
 var (
 	// DefaultTopicP has name "" (the default name)
 	// It filter's the event with LogLevel and send it to a logger writing stderr
-	DefaultTopicP = NewTopicProcessor("", DefaultP)
+	DefaultTopicP = NewTopicLogHandler("").Processor(DefaultP)
 )
 
 func init() {
 	mainP.Selector(topicSelectorFunc)
 	RegisterTopicProcessor(DefaultTopicP)
+}
+
+type LogHandler interface {
+	Processor(processor.P) processor.P
+	Debugf(fmt string, args ...interface{})
+	Infof(fmt string, args ...interface{})
+	Logf(fmt string, args ...interface{})
+	Warnf(fmt string, args ...interface{})
+	Errorf(fmt string, args ...interface{})
 }
 
 func Debugf(fmt string, args ...interface{}) {
