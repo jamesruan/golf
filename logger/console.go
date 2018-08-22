@@ -35,12 +35,7 @@ var bufPool = &sync.Pool{
 	},
 }
 
-func (l *ConsoleLogger) Log(e *event.Event) {
-	if l.out == ioutil.Discard {
-		return
-	}
-	b := bufPool.Get().(*bytes.Buffer)
-
+func (l *ConsoleLogger) fmt(b *bytes.Buffer, e *event.Event) {
 	if l.flags&CLcolor != 0 {
 		fmt.Fprintf(b, "\x1b[%dm%s\x1b[0m ", l.levelColor(e.Level), e.Level)
 	} else {
@@ -69,7 +64,14 @@ func (l *ConsoleLogger) Log(e *event.Event) {
 
 	fmt.Fprintf(b, e.Fmt, e.Args...)
 	b.WriteByte(byte('\n'))
+}
 
+func (l *ConsoleLogger) Log(e *event.Event) {
+	if l.out == ioutil.Discard {
+		return
+	}
+	b := bufPool.Get().(*bytes.Buffer)
+	l.fmt(b, e)
 	l.out.Write(b.Bytes())
 	b.Reset()
 	bufPool.Put(b)
