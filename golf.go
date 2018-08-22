@@ -1,49 +1,64 @@
 package golf
 
 import (
-	"runtime"
-	"time"
+	"github.com/jamesruan/golf/event"
+	"github.com/jamesruan/golf/logger"
+	"github.com/jamesruan/golf/processor"
 )
 
-func newEvent(calldepth int, topic string, level Level, fmt string, args []interface{}, fields map[string]interface{}) *Event {
-	_, file, line, ok := runtime.Caller(calldepth)
-	if !ok {
-		file = "???"
-		line = 0
+var mainP = processor.NewRepeater("golf")
+
+var topicSelectorFunc = func(targets []string, e *event.Event) []string {
+	for _, v := range targets {
+		if e.Topic == v {
+			return []string{v}
+		}
 	}
-	return &Event{
-		Topic:  topic,
-		Level:  level,
-		Time:   time.Now(),
-		File:   file,
-		Line:   line,
-		Fmt:    fmt,
-		Args:   args,
-		Fields: fields,
-	}
+	return []string{}
+}
+var (
+	DefaultLoggerP = processor.NewLoggerP("stderr", logger.DefaultStderrLogger)
+	DiscardLoggerP = processor.NewLoggerP("discard", logger.DiscardLogger)
+	DefaultP       = processor.NewLogLevelP(event.INFO).Either(DefaultLoggerP).Or(DiscardLoggerP)
+)
+
+var (
+	// DefaultTopicP has name "" (the default name)
+	// It filter's the event with LogLevel and send it to a logger writing stderr
+	DefaultTopicP = NewTopicProcessor("", DefaultP)
+)
+
+func init() {
+	mainP.Selector(topicSelectorFunc)
+	RegisterTopicProcessor(DefaultTopicP)
 }
 
 func Debugf(fmt string, args ...interface{}) {
-	eh := getTopicHandler("")
-	eh.in <- newEvent(2, "", DEBUG, fmt, args, nil)
+	e := event.New(2, "", event.DEBUG, fmt, args, nil)
+	mainP.Process(e)
 }
 
 func Infof(fmt string, args ...interface{}) {
-	eh := getTopicHandler("")
-	eh.in <- newEvent(2, "", INFO, fmt, args, nil)
+	e := event.New(2, "", event.INFO, fmt, args, nil)
+	mainP.Process(e)
 }
 
 func Logf(fmt string, args ...interface{}) {
-	eh := getTopicHandler("")
-	eh.in <- newEvent(2, "", LOG, fmt, args, nil)
+	e := event.New(2, "", event.LOG, fmt, args, nil)
+	mainP.Process(e)
 }
 
 func Warnf(fmt string, args ...interface{}) {
-	eh := getTopicHandler("")
-	eh.in <- newEvent(2, "", WARN, fmt, args, nil)
+	e := event.New(2, "", event.WARN, fmt, args, nil)
+	mainP.Process(e)
 }
 
 func Errorf(fmt string, args ...interface{}) {
-	eh := getTopicHandler("")
-	eh.in <- newEvent(2, "", ERROR, fmt, args, nil)
+	e := event.New(2, "", event.ERROR, fmt, args, nil)
+	mainP.Process(e)
+}
+
+// RegisterTopicProcessor register a processor with it's name the topic name
+func RegisterTopicProcessor(p processor.P) {
+	mainP.Set(p)
 }

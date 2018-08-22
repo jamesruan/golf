@@ -1,21 +1,21 @@
-package golf
+package logger
 
 import (
 	"bytes"
 	"fmt"
+	"github.com/jamesruan/golf/event"
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
 )
 
-var stderrLogger = NewConsoleLogger(os.Stderr, LstdFlags)
-
-func init() {
-	stderrLogger.SetFilter(WithLevel(LOG))
-}
+var (
+	DefaultStderrLogger = NewConsoleLogger(os.Stderr, LstdFlags)
+	DiscardLogger       = NewConsoleLogger(ioutil.Discard, LstdFlags)
+)
 
 func NewConsoleLogger(out io.Writer, flags ConsoleLoggerFlags) *ConsoleLogger {
-
 	return &ConsoleLogger{
 		out:   out,
 		flags: flags,
@@ -23,20 +23,14 @@ func NewConsoleLogger(out io.Writer, flags ConsoleLoggerFlags) *ConsoleLogger {
 }
 
 type ConsoleLogger struct {
-	out    io.Writer
-	flags  ConsoleLoggerFlags
-	filter EventFilter
+	out   io.Writer
+	flags ConsoleLoggerFlags
 }
 
-func (l *ConsoleLogger) SetFilter(f EventFilter) {
-	l.filter = f
-}
-
-func (l *ConsoleLogger) Log(e *Event) {
-	if !l.filter.FilterEvent(e) {
+func (l *ConsoleLogger) Log(e *event.Event) {
+	if l.out == ioutil.Discard {
 		return
 	}
-
 	b := new(bytes.Buffer)
 
 	if l.flags&CLcolor != 0 {
@@ -68,17 +62,17 @@ func (l *ConsoleLogger) Log(e *Event) {
 	l.out.Write(b.Bytes())
 }
 
-func (ConsoleLogger) levelColor(l Level) int {
+func (ConsoleLogger) levelColor(l event.Level) int {
 	switch l {
-	case DEBUG:
+	case event.DEBUG:
 		return 37 //white
-	case INFO:
+	case event.INFO:
 		return 34 //blue
-	case WARN:
+	case event.WARN:
 		return 33 //yellow
-	case LOG:
+	case event.LOG:
 		return 32 //green
-	case ERROR:
+	case event.ERROR:
 		return 31 //red
 	default:
 		return 0 // nocolor

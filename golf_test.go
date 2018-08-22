@@ -2,15 +2,12 @@ package golf
 
 import (
 	"testing"
-	"time"
 )
 
 func TestDefault(t *testing.T) {
-	SetFilter("", WithLevel(DEBUG))
-	Debugf("%v", DEBUG)
-	Infof("%v", INFO)
-	Logf("%v", LOG)
-	Warnf("%v", WARN)
-	Errorf("%v", ERROR)
-	time.Sleep(time.Second)
+	Debugf("%d", 0)
+	Infof("%d", 1)
+	Logf("%d", 2)
+	Warnf("%d", 3)
+	Errorf("%d", 4)
 }

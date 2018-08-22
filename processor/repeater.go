@@ -1,17 +1,17 @@
-package golf
+package processor
 
 import (
+	"github.com/jamesruan/golf/event"
 	"sync"
 )
 
 // EventSelectFunc select where the event should be sent to from targets
-type EventSelectFunc func(targets []string, e *Event) (selected []string)
+type EventSelectFunc func(targets []string, e *event.Event) (selected []string)
 
-// EventRepeater process the message by its internal selector and send the event to selected targets
-type EventRepeater struct {
-	EventProcessor
+// Repeater process the message by its internal selector and send the event to selected targets
+type Repeater struct {
 	name       string
-	processors map[string]EventProcessor
+	processors map[string]P
 	selector   *eventSelector
 	lock       *sync.RWMutex // make update processors and notifying selector atomic
 	done       chan struct{}
@@ -22,7 +22,7 @@ type eventSelector struct {
 	targets     []string
 	ch_fun      chan EventSelectFunc
 	ch_targets  chan []string
-	ch_event    chan *Event
+	ch_event    chan *event.Event
 	ch_selected chan []string
 }
 
@@ -32,13 +32,13 @@ func newEventSelector(done chan struct{}) *eventSelector {
 		targets:     []string{},
 		ch_fun:      make(chan EventSelectFunc),
 		ch_targets:  make(chan []string),
-		ch_event:    make(chan *Event),
+		ch_event:    make(chan *event.Event),
 		ch_selected: make(chan []string),
 	}
 
 	go func() {
 		var selected []string
-		var event chan *Event = s.ch_event
+		var event chan *event.Event = s.ch_event
 		for {
 			select {
 			case <-done:
@@ -63,11 +63,11 @@ func newEventSelector(done chan struct{}) *eventSelector {
 	return s
 }
 
-func defaultEventSelectFunc(targets []string, e *Event) []string {
+func defaultEventSelectFunc(targets []string, e *event.Event) []string {
 	return targets
 }
 
-func (r EventRepeater) ProcessEvent(e *Event) {
+func (r Repeater) Process(e *event.Event) {
 	r.selector.ch_event <- e
 	selected := <-r.selector.ch_selected
 
@@ -76,16 +76,16 @@ func (r EventRepeater) ProcessEvent(e *Event) {
 		p, ok := r.processors[s]
 		r.lock.RUnlock()
 		if ok {
-			p.ProcessEvent(e)
+			p.Process(e)
 		}
 	}
 }
 
-func (r EventRepeater) Name() string {
+func (r Repeater) Name() string {
 	return r.name
 }
 
-func (r EventRepeater) SetProcessor(p EventProcessor) {
+func (r Repeater) Set(p P) {
 	name := p.Name()
 	targets := make([]string, 0, len(r.processors)+1)
 	r.lock.Lock()
@@ -97,7 +97,7 @@ func (r EventRepeater) SetProcessor(p EventProcessor) {
 	r.lock.Unlock()
 }
 
-func (r EventRepeater) UnsetProcessor(name string) {
+func (r Repeater) Unset(name string) {
 	r.lock.Lock()
 	targets := make([]string, 0, len(r.processors)-1)
 	delete(r.processors, name)
@@ -108,15 +108,19 @@ func (r EventRepeater) UnsetProcessor(name string) {
 	r.lock.Unlock()
 }
 
-func (r EventRepeater) Close() {
+func (r Repeater) Selector(fun EventSelectFunc) {
+	r.selector.ch_fun <- fun
+}
+
+func (r Repeater) Close() {
 	close(r.done)
 }
 
-func NewEventRepeater(name string) *EventRepeater {
+func NewRepeater(name string) *Repeater {
 	done := make(chan struct{})
-	return &EventRepeater{
+	return &Repeater{
 		name:       name,
-		processors: make(map[string]EventProcessor),
+		processors: make(map[string]P),
 		selector:   newEventSelector(done),
 		done:       done,
 		lock:       new(sync.RWMutex),

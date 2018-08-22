@@ -1,6 +1,7 @@
-package golf
+package event
 
 import (
+	"runtime"
 	"time"
 )
 
@@ -43,16 +44,24 @@ type Event struct {
 	Fields map[string]interface{}
 }
 
-type Namer interface {
-	Name() string
+func New(calldepth int, topic string, level Level, fmt string, args []interface{}, fields map[string]interface{}) *Event {
+	_, file, line, ok := runtime.Caller(calldepth)
+	if !ok {
+		file = "???"
+		line = 0
+	}
+	return &Event{
+		Topic:  topic,
+		Level:  level,
+		Time:   time.Now(),
+		File:   file,
+		Line:   line,
+		Fmt:    fmt,
+		Args:   args,
+		Fields: fields,
+	}
 }
 
-type EventLogger interface {
-	//Namer
+type Logger interface {
 	Log(event *Event)
-	SetFilter(filter EventFilter)
-}
-
-type EventFilter interface {
-	FilterEvent(*Event) bool
 }
