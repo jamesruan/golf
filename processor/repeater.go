@@ -2,42 +2,39 @@ package processor
 
 import (
 	"github.com/jamesruan/golf/event"
-	"sync"
 )
 
 // EventSelectFunc select where the event should be sent to from targets
-type EventSelectFunc func(targets []string, e *event.Event) (selected []string)
+type EventSelectFunc func(processors map[string]P, e *event.Event)
 
 // Repeater process the message by its internal selector and send the event to selected targets
 type Repeater struct {
-	name       string
-	processors map[string]P
-	selector   *eventSelector
-	lock       *sync.RWMutex // make update processors and notifying selector atomic
-	done       chan struct{}
+	name     string
+	selector *eventSelector
+	done     chan struct{}
 }
 
 type eventSelector struct {
+	Processors  map[string]P
 	fun         EventSelectFunc
-	targets     []string
 	ch_fun      chan EventSelectFunc
-	ch_targets  chan []string
 	ch_event    chan *event.Event
 	ch_selected chan []string
+	ch_addP     chan P
+	ch_delP     chan string
 }
 
 func newEventSelector(done chan struct{}) *eventSelector {
 	s := &eventSelector{
-		fun:         defaultEventSelectFunc,
-		targets:     []string{},
-		ch_fun:      make(chan EventSelectFunc),
-		ch_targets:  make(chan []string),
-		ch_event:    make(chan *event.Event),
-		ch_selected: make(chan []string),
+		Processors: make(map[string]P),
+		fun:        defaultEventSelectFunc,
+		ch_fun:     make(chan EventSelectFunc),
+		ch_event:   make(chan *event.Event, 1),
+		ch_addP:    make(chan P),
+		ch_delP:    make(chan string),
 	}
 
 	go func() {
-		var selected []string
 		for {
 			select {
 			case <-done:
@@ -48,11 +45,12 @@ func newEventSelector(done chan struct{}) *eventSelector {
 				} else {
 					s.fun = defaultEventSelectFunc
 				}
-			case t := <-s.ch_targets:
-				s.targets = t
+			case p := <-s.ch_addP:
+				s.Processors[p.Name()] = p
+			case n := <-s.ch_delP:
+				delete(s.Processors, n)
 			case e := <-s.ch_event:
-				selected = s.fun(s.targets, e)
-				s.ch_selected <- selected
+				s.fun(s.Processors, e)
 			}
 		}
 	}()
@@ -60,22 +58,14 @@ func newEventSelector(done chan struct{}) *eventSelector {
 	return s
 }
 
-func defaultEventSelectFunc(targets []string, e *event.Event) []string {
-	return targets
+func defaultEventSelectFunc(processors map[string]P, e *event.Event) {
+	for _, p := range processors {
+		p.Process(e)
+	}
 }
 
 func (r Repeater) Process(e *event.Event) {
 	r.selector.ch_event <- e
-	selected := <-r.selector.ch_selected
-
-	for _, s := range selected {
-		r.lock.RLock()
-		p, ok := r.processors[s]
-		r.lock.RUnlock()
-		if ok {
-			p.Process(e)
-		}
-	}
 }
 
 func (r Repeater) Name() string {
@@ -83,26 +73,11 @@ func (r Repeater) Name() string {
 }
 
 func (r Repeater) Set(p P) {
-	name := p.Name()
-	targets := make([]string, 0, len(r.processors)+1)
-	r.lock.Lock()
-	r.processors[name] = p
-	for k, _ := range r.processors {
-		targets = append(targets, k)
-	}
-	r.selector.ch_targets <- targets
-	r.lock.Unlock()
+	r.selector.ch_addP <- p
 }
 
 func (r Repeater) Unset(name string) {
-	r.lock.Lock()
-	targets := make([]string, 0, len(r.processors)-1)
-	delete(r.processors, name)
-	for k, _ := range r.processors {
-		targets = append(targets, k)
-	}
-	r.selector.ch_targets <- targets
-	r.lock.Unlock()
+	r.selector.ch_delP <- name
 }
 
 func (r Repeater) Selector(fun EventSelectFunc) {
@@ -116,10 +91,8 @@ func (r Repeater) Close() {
 func NewRepeater(name string) *Repeater {
 	done := make(chan struct{})
 	return &Repeater{
-		name:       name,
-		processors: make(map[string]P),
-		selector:   newEventSelector(done),
-		done:       done,
-		lock:       new(sync.RWMutex),
+		name:     name,
+		selector: newEventSelector(done),
+		done:     done,
 	}
 }

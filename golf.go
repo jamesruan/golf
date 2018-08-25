@@ -8,13 +8,12 @@ import (
 
 var mainP = processor.NewRepeater("golf")
 
-var topicSelectorFunc = func(targets []string, e *event.Event) []string {
-	for _, v := range targets {
-		if e.Topic == v {
-			return []string{v}
+var topicSelectorFunc = func(processors map[string]processor.P, e *event.Event) {
+	for k, v := range processors {
+		if e.Topic == k {
+			v.Process(e)
 		}
 	}
-	return []string{}
 }
 var (
 	DefaultLoggerP = processor.NewLoggerP("stderr", logger.DefaultStderrLogger)
