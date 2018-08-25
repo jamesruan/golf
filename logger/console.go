@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"github.com/jamesruan/golf/event"
@@ -19,14 +20,18 @@ var (
 
 func NewConsoleLogger(out io.Writer, flags ConsoleLoggerFlags) *ConsoleLogger {
 	return &ConsoleLogger{
-		out:   out,
-		flags: flags,
+		out:    out,
+		bufout: bufio.NewWriter(out),
+		flags:  flags,
+		queue:  make(chan *event.Event, 32),
 	}
 }
 
 type ConsoleLogger struct {
-	out   io.Writer
-	flags ConsoleLoggerFlags
+	out    io.Writer
+	bufout *bufio.Writer
+	flags  ConsoleLoggerFlags
+	queue  chan *event.Event
 }
 
 var bufPool = &sync.Pool{
@@ -34,6 +39,14 @@ var bufPool = &sync.Pool{
 		buf := make([]byte, 0, 128)
 		return bytes.NewBuffer(buf)
 	},
+}
+
+func (l ConsoleLogger) Queue() <-chan *event.Event {
+	return l.queue
+}
+
+func (l ConsoleLogger) Enqueue(e *event.Event) {
+	l.queue <- e
 }
 
 func (l *ConsoleLogger) fmt(b *bytes.Buffer, e *event.Event) {
@@ -81,6 +94,12 @@ func (l *ConsoleLogger) fmt(b *bytes.Buffer, e *event.Event) {
 		b.WriteString(e.Fmt)
 	}
 
+	if len(e.Fields) > 0 {
+		for k, v := range e.Fields {
+			fmt.Fprintf(b, "%s=%v ", k, v)
+		}
+	}
+
 	if !simple && l.flags&Lframes != 0 && len(e.Pc) > 0 {
 		frames := runtime.CallersFrames(e.Pc)
 		for {
@@ -98,9 +117,12 @@ func (l *ConsoleLogger) fmt(b *bytes.Buffer, e *event.Event) {
 func (l *ConsoleLogger) Log(e *event.Event) {
 	b := bufPool.Get().(*bytes.Buffer)
 	l.fmt(b, e)
-	l.out.Write(b.Bytes())
+	l.bufout.Write(b.Bytes())
 	b.Reset()
 	bufPool.Put(b)
+	if len(l.queue) == 0 {
+		l.bufout.Flush()
+	}
 }
 
 func (ConsoleLogger) levelColor(l event.Level) int {

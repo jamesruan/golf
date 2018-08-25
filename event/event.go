@@ -74,5 +74,7 @@ func Default(calldepth int, topic string, level Level, fmt string, args []interf
 }
 
 type Logger interface {
-	Log(event *Event)
+	Queue() <-chan *Event
+	Enqueue(*Event)
+	Log(*Event)
 }
