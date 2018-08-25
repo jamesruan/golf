@@ -4,6 +4,8 @@ import (
 	"github.com/jamesruan/golf/event"
 )
 
+const DefaultQueueCapacity = 1000
+
 type LoggerP struct {
 	name   string
 	logger event.Logger

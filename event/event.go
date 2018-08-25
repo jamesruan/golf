@@ -26,7 +26,8 @@ func (l Level) String() string {
 }
 
 const (
-	DEBUG Level = iota
+	NOLEVEL Level = iota
+	DEBUG
 	INFO
 	LOG
 	WARN
@@ -37,25 +38,34 @@ type Event struct {
 	Topic  string
 	Level  Level
 	Time   time.Time
-	File   string
-	Line   int
+	Pc     []uintptr
 	Fmt    string
 	Args   []interface{}
 	Fields map[string]interface{}
 }
 
-func New(calldepth int, topic string, level Level, fmt string, args []interface{}, fields map[string]interface{}) *Event {
-	_, file, line, ok := runtime.Caller(calldepth)
-	if !ok {
-		file = "???"
-		line = 0
+func Simple(fmt string, args []interface{}, fields map[string]interface{}) *Event {
+	return &Event{
+		Time:   time.Now(),
+		Fmt:    fmt,
+		Args:   args,
+		Fields: fields,
+	}
+}
+
+func Default(calldepth int, topic string, level Level, fmt string, args []interface{}, fields map[string]interface{}) *Event {
+	pc := make([]uintptr, 32)
+	n := runtime.Callers(calldepth, pc)
+	if n > 0 {
+		pc = pc[:n]
+	} else {
+		pc = nil
 	}
 	return &Event{
 		Topic:  topic,
 		Level:  level,
 		Time:   time.Now(),
-		File:   file,
-		Line:   line,
+		Pc:     pc,
 		Fmt:    fmt,
 		Args:   args,
 		Fields: fields,
