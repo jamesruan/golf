@@ -62,15 +62,15 @@ func (l *ConsoleLogger) fmt(b *bytes.Buffer, e *event.Event) {
 	if l.flags&Ldatetime != 0 {
 		var s string
 		if l.flags&Lmicroseconds != 0 {
-			s = e.Time.Format("2006/01/02 15:04:05.000")
+			s = e.Time.Format("2006/01/02 15:04:05.000 ")
 		} else {
-			s = e.Time.Format("2006/01/02 15:04:05")
+			s = e.Time.Format("2006/01/02 15:04:05 ")
 		}
 		b.WriteString(s)
 	}
 
 	if len(e.Topic) > 0 {
-		fmt.Fprintf(b, "\x1b[97m%s\x1b[0m ", e.Topic)
+		fmt.Fprintf(b, "\x1b[92m%s\x1b[0m ", e.Topic)
 	}
 
 	if !simple && l.flags&Lframes == 0 {

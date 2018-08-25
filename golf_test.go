@@ -27,7 +27,7 @@ func TestDefault(t *testing.T) {
 	v.Errorf("%d", 4)
 }
 
-func BenchmarkDefaultStderr(b *testing.B) {
+func BenchmarkDefault(b *testing.B) {
 	RegisterTopicProcessor(NewTopicLogHandler("").Processor(DiscardLoggerP))
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -36,7 +36,7 @@ func BenchmarkDefaultStderr(b *testing.B) {
 	})
 }
 
-func BenchmarkSimpleStderr(b *testing.B) {
+func BenchmarkSimple(b *testing.B) {
 	RegisterTopicProcessor(NewTopicLogHandler("").Processor(DiscardLoggerP))
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
