@@ -67,6 +67,11 @@ func Errorf(fmt string, args ...interface{}) {
 	mainP.Process(e)
 }
 
+func Printf(fmt string, args ...interface{}) {
+	e := event.Simple(fmt, args, nil)
+	mainP.Process(e)
+}
+
 // RegisterTopicProcessor register a processor with it's name the topic name
 func RegisterTopicProcessor(p processor.P) {
 	mainP.Set(p)

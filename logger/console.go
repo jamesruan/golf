@@ -37,27 +37,30 @@ var bufPool = &sync.Pool{
 }
 
 func (l *ConsoleLogger) fmt(b *bytes.Buffer, e *event.Event) {
-	if l.flags&CLcolor != 0 {
-		fmt.Fprintf(b, "\x1b[%dm%s\x1b[0m ", l.levelColor(e.Level), e.Level)
-	} else {
-		fmt.Fprintf(b, "[%s] ", e.Level)
+	simple := e.Level == event.NOLEVEL
+	if !simple {
+		if l.flags&CLcolor != 0 {
+			fmt.Fprintf(b, "\x1b[%dm%s\x1b[0m ", l.levelColor(e.Level), e.Level)
+		} else {
+			fmt.Fprintf(b, "[%s] ", e.Level)
+		}
 	}
 
 	if l.flags&Ldatetime != 0 {
-		Y, M, D := e.Time.Date()
-		h, m, s := e.Time.Clock()
-		fmt.Fprintf(b, "%04d/%02d/%02d %02d:%02d:%02d ", Y, M, D, h, m, s)
+		var s string
 		if l.flags&Lmicroseconds != 0 {
-			n := e.Time.Nanosecond()
-			fmt.Fprintf(b, ".%03d", n)
+			s = e.Time.Format("2006/01/02 15:04:05.000")
+		} else {
+			s = e.Time.Format("2006/01/02 15:04:05")
 		}
+		b.WriteString(s)
 	}
 
 	if len(e.Topic) > 0 {
 		fmt.Fprintf(b, "\x1b[97m%s\x1b[0m ", e.Topic)
 	}
 
-	if l.flags&Lframes == 0 {
+	if !simple && l.flags&Lframes == 0 {
 		if len(e.Pc) > 0 {
 			pc := e.Pc[0]
 			f := runtime.FuncForPC(pc)
@@ -72,9 +75,13 @@ func (l *ConsoleLogger) fmt(b *bytes.Buffer, e *event.Event) {
 		}
 	}
 
-	fmt.Fprintf(b, e.Fmt, e.Args...)
+	if len(e.Args) > 0 {
+		fmt.Fprintf(b, e.Fmt, e.Args...)
+	} else {
+		b.WriteString(e.Fmt)
+	}
 
-	if l.flags&Lframes != 0 && len(e.Pc) > 0 {
+	if !simple && l.flags&Lframes != 0 && len(e.Pc) > 0 {
 		frames := runtime.CallersFrames(e.Pc)
 		for {
 			f, more := frames.Next()
@@ -89,9 +96,6 @@ func (l *ConsoleLogger) fmt(b *bytes.Buffer, e *event.Event) {
 }
 
 func (l *ConsoleLogger) Log(e *event.Event) {
-	if l.out == ioutil.Discard {
-		return
-	}
 	b := bufPool.Get().(*bytes.Buffer)
 	l.fmt(b, e)
 	l.out.Write(b.Bytes())

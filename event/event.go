@@ -26,12 +26,12 @@ func (l Level) String() string {
 }
 
 const (
-	NOLEVEL Level = iota
-	DEBUG
+	DEBUG Level = iota
 	INFO
 	LOG
 	WARN
 	ERROR
+	NOLEVEL
 )
 
 type Event struct {
@@ -46,6 +46,7 @@ type Event struct {
 
 func Simple(fmt string, args []interface{}, fields map[string]interface{}) *Event {
 	return &Event{
+		Level:  NOLEVEL,
 		Time:   time.Now(),
 		Fmt:    fmt,
 		Args:   args,
