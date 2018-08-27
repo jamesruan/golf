@@ -6,6 +6,7 @@ import (
 	"github.com/jamesruan/golf/processor"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestDefault(t *testing.T) {
@@ -17,6 +18,7 @@ func TestDefault(t *testing.T) {
 
 	frameLoggerP := processor.NewLoggerP("stderr", logger.NewConsoleLogger(os.Stderr, logger.LstdFlags|logger.Lframes))
 	p := processor.NewLogLevelP(event.DEBUG).Either(frameLoggerP).Or(DiscardLoggerP)
+
 	v := NewTopicLogHandler("mytopic")
 
 	RegisterTopicProcessor(v.Processor(p))
@@ -25,6 +27,7 @@ func TestDefault(t *testing.T) {
 	v.Logf("%d", 2)
 	v.Warnf("%d", 3)
 	v.Errorf("%d", 4)
+	time.Sleep(1 * time.Second)
 }
 
 func BenchmarkDefault(b *testing.B) {

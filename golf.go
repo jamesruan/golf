@@ -21,15 +21,12 @@ var (
 	DefaultP       = processor.NewLogLevelP(event.INFO).Either(DefaultLoggerP).Or(DiscardLoggerP)
 )
 
-var (
-	// DefaultTopicP has name "" (the default name)
-	// It filter's the event with LogLevel and send it to a logger writing stderr
-	DefaultTopicP = NewTopicLogHandler("").Processor(DefaultP)
-)
+var ()
 
 func init() {
 	mainP.Selector(topicSelectorFunc)
-	RegisterTopicProcessor(DefaultTopicP)
+	defaultTopicP := NewTopicLogHandler("").Processor(DefaultP)
+	RegisterTopicProcessor(defaultTopicP)
 }
 
 type LogHandler interface {
