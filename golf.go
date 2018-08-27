@@ -42,27 +42,27 @@ type LogHandler interface {
 }
 
 func Debugf(fmt string, args ...interface{}) {
-	e := event.Default(2, "", event.DEBUG, fmt, args, nil)
+	e := event.Default(3, "", event.DEBUG, fmt, args, nil)
 	mainP.Process(e)
 }
 
 func Infof(fmt string, args ...interface{}) {
-	e := event.Default(2, "", event.INFO, fmt, args, nil)
+	e := event.Default(3, "", event.INFO, fmt, args, nil)
 	mainP.Process(e)
 }
 
 func Logf(fmt string, args ...interface{}) {
-	e := event.Default(2, "", event.LOG, fmt, args, nil)
+	e := event.Default(3, "", event.LOG, fmt, args, nil)
 	mainP.Process(e)
 }
 
 func Warnf(fmt string, args ...interface{}) {
-	e := event.Default(2, "", event.WARN, fmt, args, nil)
+	e := event.Default(3, "", event.WARN, fmt, args, nil)
 	mainP.Process(e)
 }
 
 func Errorf(fmt string, args ...interface{}) {
-	e := event.Default(2, "", event.ERROR, fmt, args, nil)
+	e := event.Default(3, "", event.ERROR, fmt, args, nil)
 	mainP.Process(e)
 }
 
