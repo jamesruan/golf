@@ -9,6 +9,13 @@ type P interface {
 	Process(*event.Event)
 }
 
+type SelectP interface {
+	P
+	Select(*event.Event) ([]P, bool)
+	Set(P)
+	Unset(string)
+}
+
 type EitherP interface {
 	P
 	Judge(e *event.Event) bool

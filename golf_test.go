@@ -16,7 +16,8 @@ func TestDefault(t *testing.T) {
 	Warnf("%d", 3)
 	Errorf("%d", 4)
 
-	frameLoggerP := processor.NewLoggerP("stderr", logger.NewConsoleLogger(os.Stderr, logger.LstdFlags|logger.Lframes))
+	frameConsoleLogger := logger.NewConsoleLogger(os.Stderr, logger.LstdFlags|logger.Lframes)
+	frameLoggerP := processor.NewLoggerP("stderr", frameConsoleLogger)
 	p := processor.NewLogLevelP(event.DEBUG).Either(frameLoggerP).Or(DiscardLoggerP)
 
 	v := NewTopicLogHandler("mytopic")

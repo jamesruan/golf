@@ -4,30 +4,29 @@ import (
 	"github.com/jamesruan/golf/event"
 )
 
-const DefaultQueueCapacity = 1000
-
-type LoggerP struct {
+type loggerP struct {
 	name   string
 	logger event.Logger
 }
 
-func NewLoggerP(name string, logger event.Logger) *LoggerP {
+// LoggerP returns a processor that handle event to a logger
+func NewLoggerP(name string, logger event.Logger) P {
 	go func() {
 		for e := range logger.Queue() {
 			logger.Log(e)
 		}
 	}()
-	return &LoggerP{
+	return &loggerP{
 		name:   name,
 		logger: logger,
 	}
 }
 
-func (p LoggerP) Name() string {
+func (p loggerP) Name() string {
 	return p.name
 }
 
-func (p LoggerP) Process(e *event.Event) {
+func (p loggerP) Process(e *event.Event) {
 	p.logger.Enqueue(e)
 	return
 }

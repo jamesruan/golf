@@ -1,16 +1,17 @@
 package processor
 
-type NamedP struct {
+type namedP struct {
 	P
 	name string
 }
 
-func (p NamedP) Name() string {
+func (p namedP) Name() string {
 	return p.name
 }
 
-func NewNamedP(name string, next P) *NamedP {
-	return &NamedP{
+// NewNamedP warp a processor with new name.
+func NewNamedP(name string, next P) P {
+	return &namedP{
 		name: name,
 		P:    next,
 	}

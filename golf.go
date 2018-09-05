@@ -1,20 +1,14 @@
 package golf
 
 import (
+	"context"
 	"github.com/jamesruan/golf/event"
 	"github.com/jamesruan/golf/logger"
 	"github.com/jamesruan/golf/processor"
 )
 
-var mainP = processor.NewRepeater("golf")
+var mainP = processor.NewTopicP("golf", context.Background())
 
-var topicSelectorFunc = func(processors map[string]processor.P, e *event.Event) {
-	for k, v := range processors {
-		if e.Topic == k {
-			v.Process(e)
-		}
-	}
-}
 var (
 	DefaultLoggerP = processor.NewLoggerP("stderr", logger.DefaultStderrLogger)
 	DiscardLoggerP = processor.NewLoggerP("discard", logger.DiscardLogger)
@@ -24,7 +18,6 @@ var (
 var ()
 
 func init() {
-	mainP.Selector(topicSelectorFunc)
 	defaultTopicP := NewTopicLogHandler("").Processor(DefaultP)
 	RegisterTopicProcessor(defaultTopicP)
 }
