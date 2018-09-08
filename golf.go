@@ -7,7 +7,7 @@ import (
 	"github.com/jamesruan/golf/processor"
 )
 
-var mainP = processor.NewTopicP("golf", context.Background())
+var mainP = processor.NewTopicP("golf")
 
 var (
 	DefaultLoggerP = processor.NewLoggerP("stderr", logger.DefaultStderrLogger)
@@ -18,6 +18,9 @@ var (
 var ()
 
 func init() {
+	mainP.Start(context.Background())
+	DefaultP.Start(mainP.Context())
+
 	defaultTopicP := NewTopicLogHandler("").Processor(DefaultP)
 	RegisterTopicProcessor(defaultTopicP)
 }

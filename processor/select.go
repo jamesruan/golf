@@ -11,6 +11,7 @@ type selectP struct {
 	name       string
 	processors map[string]P
 	f          selectFunc
+	ch_started chan struct{}
 	ch_event   chan *event.Event
 	ch_addP    chan P
 	ch_delP    chan string
@@ -22,7 +23,12 @@ func (t selectP) Name() string {
 	return t.name
 }
 
+func (t selectP) Context() context.Context {
+	return t.ctx
+}
+
 func (t selectP) Process(e *event.Event) {
+	<-t.ch_started
 	t.ch_event <- e
 }
 
@@ -31,6 +37,7 @@ func (t selectP) Set(p P) {
 }
 
 func (t selectP) Unset(name string) {
+	<-t.ch_started
 	t.ch_delP <- name
 }
 
@@ -38,23 +45,21 @@ func (t selectP) Select(e *event.Event) ([]P, bool) {
 	return t.f(t.processors, e)
 }
 
-func (t selectP) Close() {
-	t.cancel()
+func (t selectP) End() {
+	select {
+	case <-t.ch_started:
+		t.cancel()
+	default:
+	}
 }
 
-func makeSelectP(name string, ctx context.Context, f selectFunc) selectP {
+func (t *selectP) Start(ctx context.Context) P {
 	nctx, cancel := context.WithCancel(ctx)
-	t := selectP{
-		name:       name,
-		processors: make(map[string]P),
-		f:          f,
-		ch_event:   make(chan *event.Event),
-		ch_addP:    make(chan P),
-		ch_delP:    make(chan string),
-		ctx:        nctx,
-		cancel:     cancel,
-	}
+	t.ctx = nctx
+	t.cancel = cancel
+
 	go func() {
+		close(t.ch_started)
 		for {
 			select {
 			case <-nctx.Done():
@@ -73,6 +78,20 @@ func makeSelectP(name string, ctx context.Context, f selectFunc) selectP {
 			}
 		}
 	}()
+
+	return t
+}
+
+func makeSelectP(name string, f selectFunc) selectP {
+	t := selectP{
+		name:       name,
+		processors: make(map[string]P),
+		f:          f,
+		ch_started: make(chan struct{}),
+		ch_event:   make(chan *event.Event),
+		ch_addP:    make(chan P, 1),
+		ch_delP:    make(chan string),
+	}
 
 	return t
 }
