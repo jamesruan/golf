@@ -12,14 +12,23 @@ var mainP = processor.NewTopicP("golf")
 var (
 	DefaultLoggerP = processor.NewLoggerP("stderr", logger.DefaultStderrLogger)
 	DiscardLoggerP = processor.NewLoggerP("discard", logger.DiscardLogger)
-	DefaultP       = processor.NewLogLevelP(event.INFO).Either(DefaultLoggerP).Or(DiscardLoggerP)
+	DefaultDebugP  = processor.NewLogLevelP(event.DEBUG).Either(DefaultLoggerP).Or(DiscardLoggerP)
+	DefaultInfoP   = processor.NewLogLevelP(event.INFO).Either(DefaultLoggerP).Or(DiscardLoggerP)
+	DefaultLogP    = processor.NewLogLevelP(event.LOG).Either(DefaultLoggerP).Or(DiscardLoggerP)
+	DefaultWarnP   = processor.NewLogLevelP(event.WARN).Either(DefaultLoggerP).Or(DiscardLoggerP)
+	DefaultErrorP  = processor.NewLogLevelP(event.ERROR).Either(DefaultLoggerP).Or(DiscardLoggerP)
+	DefaultP       = DefaultInfoP
 )
 
 var ()
 
 func init() {
 	mainP.Start(context.Background())
-	DefaultP.Start(mainP.Context())
+	DefaultDebugP.Start(mainP.Context())
+	DefaultInfoP.Start(mainP.Context())
+	DefaultLogP.Start(mainP.Context())
+	DefaultWarnP.Start(mainP.Context())
+	DefaultErrorP.Start(mainP.Context())
 
 	defaultTopicP := NewTopicLogHandler("").Processor(DefaultP)
 	RegisterTopicProcessor(defaultTopicP)
