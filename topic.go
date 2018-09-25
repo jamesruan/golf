@@ -5,10 +5,14 @@ import (
 	"github.com/jamesruan/golf/processor"
 )
 
+// NewTopicLogHandler create a new logger that has embedded topic.
+// It is by default connected to DiscardLoggerP
 func NewTopicLogHandler(topic string) LogHandler {
-	return &topicLogHandler{
+	t := &topicLogHandler{
 		topic: topic,
 	}
+	t.Processor(DiscardLoggerP)
+	return t
 }
 
 type topicLogHandler struct {
