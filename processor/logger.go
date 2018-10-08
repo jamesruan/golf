@@ -12,8 +12,25 @@ type loggerP struct {
 // LoggerP returns a processor that handle event to a logger
 func NewLoggerP(name string, logger event.Logger) P {
 	go func() {
-		for e := range logger.Queue() {
-			logger.Log(e)
+		loggerWg.Add(1)
+		defer loggerWg.Done()
+	loop:
+		for {
+			select {
+			case e := <-logger.Queue():
+				logger.Log(e)
+			case <-exitSignal:
+				break loop
+			}
+		}
+		// make sure the queue is empty
+		for {
+			select {
+			case e := <-logger.Queue():
+				logger.Log(e)
+			default:
+				return
+			}
 		}
 	}()
 	return &loggerP{

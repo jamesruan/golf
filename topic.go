@@ -44,6 +44,12 @@ func (t topicLogHandler) Errorf(fmt string, args ...interface{}) {
 	mainP.Process(e)
 }
 
+func (t topicLogHandler) Fatalf(fmt string, args ...interface{}) {
+	e := event.Default(3, t.topic, event.ERROR, fmt, args, nil)
+	mainP.Process(e)
+	processor.Exit()
+}
+
 func (t topicLogHandler) Processor(next processor.P) processor.P {
 	return processor.NewNamedP(t.topic, next)
 }

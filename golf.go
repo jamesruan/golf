@@ -41,6 +41,7 @@ type LogHandler interface {
 	Logf(fmt string, args ...interface{})
 	Warnf(fmt string, args ...interface{})
 	Errorf(fmt string, args ...interface{})
+	Fatalf(fmt string, args ...interface{})
 }
 
 func Debugf(fmt string, args ...interface{}) {
@@ -66,6 +67,12 @@ func Warnf(fmt string, args ...interface{}) {
 func Errorf(fmt string, args ...interface{}) {
 	e := event.Default(3, "", event.ERROR, fmt, args, nil)
 	mainP.Process(e)
+}
+
+func Fatalf(fmt string, args ...interface{}) {
+	e := event.Default(3, "", event.ERROR, fmt, args, nil)
+	mainP.Process(e)
+	processor.Exit()
 }
 
 func Printf(fmt string, args ...interface{}) {
