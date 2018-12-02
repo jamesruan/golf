@@ -6,7 +6,6 @@ import (
 	"github.com/jamesruan/golf/processor"
 	"os"
 	"testing"
-	"time"
 )
 
 func TestDefault(t *testing.T) {
@@ -29,7 +28,7 @@ func TestDefault(t *testing.T) {
 	v.Logf("%d", 2)
 	v.Warnf("%d", 3)
 	v.Errorf("%d", 4)
-	time.Sleep(1 * time.Second)
+	v.Fatalf("%d", 5)
 }
 
 func BenchmarkDefault(b *testing.B) {

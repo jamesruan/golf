@@ -77,4 +77,5 @@ type Logger interface {
 	Queue() <-chan *Event
 	Enqueue(*Event)
 	Log(*Event)
+	Flush()
 }

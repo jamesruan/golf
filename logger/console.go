@@ -130,6 +130,10 @@ func (l *ConsoleLogger) Log(e *event.Event) {
 	}
 }
 
+func (l *ConsoleLogger) Flush() {
+	l.bufout.Flush()
+}
+
 func (ConsoleLogger) levelColor(l event.Level) int {
 	switch l {
 	case event.DEBUG:

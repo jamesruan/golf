@@ -29,6 +29,7 @@ func NewLoggerP(name string, logger event.Logger) P {
 			case e := <-logger.Queue():
 				logger.Log(e)
 			default:
+				logger.Flush()
 				return
 			}
 		}
