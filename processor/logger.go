@@ -2,6 +2,7 @@ package processor
 
 import (
 	"github.com/jamesruan/golf/event"
+	"time"
 )
 
 type loggerP struct {
@@ -30,6 +31,7 @@ func NewLoggerP(name string, logger event.Logger) P {
 				logger.Log(e)
 			default:
 				logger.Flush()
+				time.Sleep(500 * time.Millisecond)
 				return
 			}
 		}
