@@ -1,13 +1,13 @@
 package golf
 
 import (
-	"context"
 	"github.com/jamesruan/golf/event"
 	"github.com/jamesruan/golf/logger"
 	"github.com/jamesruan/golf/processor"
 )
 
 var mainP = processor.NewTopicP("golf")
+var mainStop = make(chan struct{})
 
 var (
 	DefaultLoggerP = processor.NewLoggerP("stderr", logger.DefaultStderrLogger)
@@ -20,15 +20,13 @@ var (
 	DefaultP       = DefaultInfoP
 )
 
-var ()
-
 func init() {
-	mainP.Start(context.Background())
-	DefaultDebugP.Start(mainP.Context())
-	DefaultInfoP.Start(mainP.Context())
-	DefaultLogP.Start(mainP.Context())
-	DefaultWarnP.Start(mainP.Context())
-	DefaultErrorP.Start(mainP.Context())
+	mainP.Start(mainStop)
+	DefaultDebugP.Start(mainP.Stopped())
+	DefaultInfoP.Start(mainP.Stopped())
+	DefaultLogP.Start(mainP.Stopped())
+	DefaultWarnP.Start(mainP.Stopped())
+	DefaultErrorP.Start(mainP.Stopped())
 
 	defaultTopicP := NewTopicLogHandler("").Processor(DefaultP)
 	RegisterTopicProcessor(defaultTopicP)
@@ -72,6 +70,7 @@ func Errorf(fmt string, args ...interface{}) {
 func Fatalf(fmt string, args ...interface{}) {
 	e := event.Default(3, "", event.ERROR, fmt, args, nil)
 	mainP.Process(e)
+	close(mainStop)
 	processor.Exit()
 }
 

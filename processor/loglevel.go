@@ -1,21 +1,22 @@
 package processor
 
 import (
-	"context"
+	"fmt"
 	"github.com/jamesruan/golf/event"
 	"strings"
 )
 
 type logLevelP struct {
-	level      event.Level
-	ch_started chan struct{}
-	ch_either  chan P
-	ch_or      chan P
-	ch_event   chan *event.Event
-	either     P
-	or         P
-	ctx        context.Context
-	cancel     context.CancelFunc
+	level       event.Level
+	ch_started  chan struct{}
+	ch_either   chan P
+	ch_or       chan P
+	ch_event    chan *event.Event
+	ch_flushing chan struct{}
+	ch_stopping chan struct{}
+	ch_stopped  chan struct{}
+	either      P
+	or          P
 }
 
 func (l logLevelP) Name() string {
@@ -25,17 +26,14 @@ func (l logLevelP) Name() string {
 	return sb.String()
 }
 
-func (l logLevelP) Context() context.Context {
-	return l.ctx
-}
-
 func (l logLevelP) Process(e *event.Event) {
 	<-l.ch_started
-	l.ch_event <- e
-}
-
-func (l logLevelP) Judge(e *event.Event) bool {
-	return e.Level >= l.level
+	select {
+	case <-l.ch_stopping:
+		return
+	default:
+		l.ch_event <- e
+	}
 }
 
 func (l *logLevelP) Either(p P) EitherP {
@@ -48,52 +46,101 @@ func (l *logLevelP) Or(p P) EitherP {
 	return l
 }
 
-func (l *logLevelP) Start(ctx context.Context) P {
-	nctx, cancel := context.WithCancel(ctx)
-	l.ctx = nctx
-	l.cancel = cancel
+func (l logLevelP) Judge(e *event.Event) bool {
+	return e.Level >= l.level
+}
 
+func (l logLevelP) process(e *event.Event, flush bool) {
+	if l.Judge(e) {
+		if l.either != nil {
+			l.either.Process(e)
+			if flush {
+				l.either.Flush()
+			}
+		}
+	} else {
+		if l.or != nil {
+			l.or.Process(e)
+			if flush {
+				l.or.Flush()
+			}
+		}
+	}
+}
+
+func (t logLevelP) Stopped() <-chan struct{} {
+	return t.ch_stopped
+}
+
+func (l *logLevelP) Start(stop <-chan struct{}) P {
+	select {
+	case <-l.ch_started:
+		panic(fmt.Sprintf("golf: Start an already started P: %s", l.Name()))
+	default:
+	}
+	parent_stop := stop
 	go func() {
 		close(l.ch_started)
+		flushing := false
 		for {
 			select {
-			case <-l.ctx.Done():
-				return
-			case e := <-l.ch_event:
-				if l.Judge(e) {
-					if l.either != nil {
-						l.either.Process(e)
-					}
-				} else {
-					if l.or != nil {
-						l.or.Process(e)
-					}
-				}
 			case p := <-l.ch_either:
 				l.either = p
 			case p := <-l.ch_or:
 				l.or = p
+			case <-l.ch_stopping:
+				// flush pending event
+				for {
+					select {
+					case e := <-l.ch_event:
+						l.process(e, true)
+					default:
+						close(l.ch_stopped)
+						return
+					}
+				}
+			default:
+			}
+			select {
+			case <-parent_stop:
+				l.Stop()
+				parent_stop = nil
+			case e := <-l.ch_event:
+				l.process(e, flushing)
+				if len(l.ch_event) == 0 {
+					flushing = false
+				}
+			case <-l.ch_flushing:
+				flushing = true
 			}
 		}
 	}()
 	return l
 }
 
-func (l *logLevelP) End() {
+func (l logLevelP) Stop() {
 	select {
-	case <-l.ch_started:
-		l.cancel()
+	case <-l.ch_stopped:
+		panic(fmt.Sprintf("golf: Stop an already Stopped P: levll %s", l.Name()))
 	default:
 	}
+	close(l.ch_stopping)
+}
+
+func (l logLevelP) Flush() {
+	l.ch_flushing <- struct{}{}
 }
 
 // NewLogLevelP returns a processor that process event.Level >= lvl in Either branch.
 func NewLogLevelP(lvl event.Level) EitherP {
 	return &logLevelP{
-		ch_started: make(chan struct{}),
-		ch_event:   make(chan *event.Event),
-		ch_either:  make(chan P, 1),
-		ch_or:      make(chan P, 1),
-		level:      lvl,
+		level:       lvl,
+		ch_started:  make(chan struct{}),
+		ch_event:    make(chan *event.Event),
+		ch_either:   make(chan P, 1),
+		ch_or:       make(chan P, 1),
+		ch_flushing: make(chan struct{}),
+		ch_stopping: make(chan struct{}),
+		ch_stopped:  make(chan struct{}),
 	}
 }

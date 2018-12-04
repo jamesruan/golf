@@ -1,7 +1,6 @@
 package processor
 
 import (
-	"context"
 	"github.com/jamesruan/golf/event"
 )
 
@@ -9,15 +8,16 @@ import (
 type P interface {
 	Name() string
 	Process(*event.Event)
+	Flush()
 }
 
 // ResidentP is a P that running in a separate go routing thus needs to be started.
 // It ends when End() is called or when ctx cancelled.
 type ResidentP interface {
 	P
-	Context() context.Context
-	Start(ctx context.Context) P
-	End()
+	Start(stop <-chan struct{}) P
+	Stop()
+	Stopped() <-chan struct{}
 }
 
 // EitherP is a P that choose down stream P by Judge()

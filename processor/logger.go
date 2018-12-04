@@ -12,26 +12,19 @@ type loggerP struct {
 
 // LoggerP returns a processor that handle event to a logger
 func NewLoggerP(name string, logger event.Logger) P {
+	process_exiting := exitSignal
 	go func() {
 		loggerWg.Add(1)
 		defer loggerWg.Done()
-	loop:
+		var timeout <-chan time.Time
 		for {
 			select {
 			case e := <-logger.Queue():
 				logger.Log(e)
-			case <-exitSignal:
-				break loop
-			}
-		}
-		// make sure the queue is empty
-		for {
-			select {
-			case e := <-logger.Queue():
-				logger.Log(e)
-			default:
-				logger.Flush()
-				time.Sleep(500 * time.Millisecond)
+			case <-process_exiting:
+				timeout = time.After(100 * time.Millisecond)
+				process_exiting = nil
+			case <-timeout:
 				return
 			}
 		}
@@ -49,4 +42,8 @@ func (p loggerP) Name() string {
 func (p loggerP) Process(e *event.Event) {
 	p.logger.Enqueue(e)
 	return
+}
+
+func (p loggerP) Flush() {
+	p.logger.Flush()
 }

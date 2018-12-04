@@ -23,7 +23,7 @@ func NewConsoleLogger(out io.Writer, flags ConsoleLoggerFlags) *ConsoleLogger {
 		out:    out,
 		bufout: bufio.NewWriter(out),
 		flags:  flags,
-		queue:  make(chan *event.Event, 32),
+		queue:  make(chan *event.Event, 128),
 	}
 }
 
@@ -36,7 +36,7 @@ type ConsoleLogger struct {
 
 var bufPool = &sync.Pool{
 	New: func() interface{} {
-		buf := make([]byte, 0, 128)
+		buf := make([]byte, 0, 256)
 		return bytes.NewBuffer(buf)
 	},
 }
