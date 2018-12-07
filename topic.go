@@ -47,7 +47,8 @@ func (t topicLogHandler) Errorf(fmt string, args ...interface{}) {
 func (t topicLogHandler) Fatalf(fmt string, args ...interface{}) {
 	e := event.Default(3, t.topic, event.ERROR, fmt, args, nil)
 	mainP.Process(e)
-	processor.Exit()
+	close(mainStop)
+	processor.WaitAllLoggerStop()
 }
 
 func (t topicLogHandler) Processor(next processor.P) processor.P {

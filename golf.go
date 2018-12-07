@@ -22,6 +22,8 @@ var (
 
 func init() {
 	mainP.Start(mainStop)
+	DefaultLoggerP.Start(mainP.Stopped())
+	DiscardLoggerP.Start(mainP.Stopped())
 	DefaultDebugP.Start(mainP.Stopped())
 	DefaultInfoP.Start(mainP.Stopped())
 	DefaultLogP.Start(mainP.Stopped())
@@ -71,7 +73,7 @@ func Fatalf(fmt string, args ...interface{}) {
 	e := event.Default(3, "", event.ERROR, fmt, args, nil)
 	mainP.Process(e)
 	close(mainStop)
-	processor.Exit()
+	processor.WaitAllLoggerStop()
 }
 
 func Printf(fmt string, args ...interface{}) {

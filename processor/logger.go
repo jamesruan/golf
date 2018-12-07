@@ -2,41 +2,60 @@ package processor
 
 import (
 	"github.com/jamesruan/golf/event"
-	"time"
+	"sync"
 )
 
 type loggerP struct {
-	name   string
-	logger event.Logger
+	name       string
+	logger     event.Logger
+	ch_stopped chan struct{}
+}
+
+var loggerWg = new(sync.WaitGroup)
+
+func WaitAllLoggerStop() {
+	loggerWg.Wait()
 }
 
 // LoggerP returns a processor that handle event to a logger
-func NewLoggerP(name string, logger event.Logger) P {
-	process_exiting := exitSignal
-	go func() {
-		loggerWg.Add(1)
-		defer loggerWg.Done()
-		var timeout <-chan time.Time
-		for {
-			select {
-			case e := <-logger.Queue():
-				logger.Log(e)
-			case <-process_exiting:
-				timeout = time.After(100 * time.Millisecond)
-				process_exiting = nil
-			case <-timeout:
-				return
-			}
-		}
-	}()
+func NewLoggerP(name string, logger event.Logger) ResidentP {
 	return &loggerP{
-		name:   name,
-		logger: logger,
+		name:       name,
+		logger:     logger,
+		ch_stopped: make(chan struct{}),
 	}
 }
 
 func (p loggerP) Name() string {
 	return p.name
+}
+
+func (p loggerP) Stopped() <-chan struct{} {
+	return p.ch_stopped
+}
+
+func (p *loggerP) Start(stop <-chan struct{}) P {
+	go func() {
+		loggerWg.Add(1)
+		defer loggerWg.Done()
+		for {
+			select {
+			case e := <-p.logger.Queue():
+				p.logger.Log(e)
+			case <-stop:
+				for {
+					select {
+					case e := <-p.logger.Queue():
+						p.logger.Log(e)
+					default:
+						p.logger.Flush()
+						return
+					}
+				}
+			}
+		}
+	}()
+	return p
 }
 
 func (p loggerP) Process(e *event.Event) {

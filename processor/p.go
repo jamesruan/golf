@@ -16,7 +16,6 @@ type P interface {
 type ResidentP interface {
 	P
 	Start(stop <-chan struct{}) P
-	Stop()
 	Stopped() <-chan struct{}
 }
 

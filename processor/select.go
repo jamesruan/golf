@@ -1,8 +1,8 @@
 package processor
 
 import (
-	"fmt"
 	"github.com/jamesruan/golf/event"
+	"sync"
 )
 
 type selectFunc = func(map[string]P, *event.Event) ([]P, bool)
@@ -11,17 +11,12 @@ type selectP struct {
 	name        string
 	processors  map[string]P
 	f           selectFunc
-	ch_started  chan struct{}
-	ch_event    chan *event.Event
-	ch_command  chan selectPCmd
+	state       string
 	ch_flushing chan struct{}
-	ch_stopping chan struct{}
+	ch_event    chan *event.Event
+	ch_add      chan P
+	ch_delete   chan string
 	ch_stopped  chan struct{}
-}
-
-type selectPCmd struct {
-	p P      // for add
-	n string // for delete
 }
 
 func (t selectP) Name() string {
@@ -29,36 +24,25 @@ func (t selectP) Name() string {
 }
 
 func (t selectP) Process(e *event.Event) {
-	<-t.ch_started
-	select {
-	case <-t.ch_stopping:
-		return
-	default:
-		t.ch_event <- e
-	}
+	t.ch_event <- e
 }
 
 func (t selectP) Set(p P) {
-	<-t.ch_started
-	t.ch_command <- selectPCmd{p: p}
+	t.ch_add <- p
 }
 
 func (t selectP) Unset(name string) {
-	<-t.ch_started
-	t.ch_command <- selectPCmd{n: name}
+	t.ch_delete <- name
 }
 
 func (t selectP) Select(e *event.Event) ([]P, bool) {
 	return t.f(t.processors, e)
 }
 
-func (t selectP) process(e *event.Event, flushing bool) {
+func (t selectP) process(e *event.Event) {
 	if ps, ok := t.Select(e); ok {
 		for i, _ := range ps {
 			ps[i].Process(e)
-			if flushing {
-				ps[i].Flush()
-			}
 		}
 	}
 }
@@ -67,65 +51,68 @@ func (t selectP) Stopped() <-chan struct{} {
 	return t.ch_stopped
 }
 
-func (t selectP) Stop() {
-	select {
-	case <-t.ch_stopped:
-		panic(fmt.Sprintf("golf: Stop an already Stopped P: %s", t.Name()))
-	default:
+func (t *selectP) loop(stop <-chan struct{}) {
+	defer close(t.ch_stopped)
+
+	for {
+		switch t.state {
+		case "INIT":
+			select {
+			case p := <-t.ch_add:
+				t.processors[p.Name()] = p
+				t.state = "ACTIVE"
+			case <-stop:
+				t.state = "STOPPED"
+			}
+		case "ACTIVE":
+			select {
+			case p := <-t.ch_add:
+				t.processors[p.Name()] = p
+				t.state = "ACTIVE"
+			case name := <-t.ch_delete:
+				delete(t.processors, name)
+			case e := <-t.ch_event:
+				t.process(e)
+			case <-t.ch_flushing:
+				t.flush()
+			case <-stop:
+				t.state = "STOPPING"
+			}
+		case "STOPPING":
+			select {
+			case e := <-t.ch_event:
+				t.process(e)
+			default:
+				t.state = "STOPPED"
+			}
+		case "STOPPED":
+			t.flush()
+			return
+		}
 	}
-	close(t.ch_stopping)
+}
+
+func (t *selectP) flush() {
+	print("FLUSH SELECT\n")
+	wg := new(sync.WaitGroup)
+	for n, _ := range t.processors {
+		wg.Add(1)
+		go func(i string) {
+			t.processors[i].Flush()
+			wg.Done()
+		}(n)
+	}
+	wg.Wait()
 }
 
 func (t *selectP) Start(stop <-chan struct{}) P {
-	select {
-	case <-t.ch_started:
-		panic(fmt.Sprintf("golf: Start an already started P: %s", t.Name()))
-	default:
-	}
-	go func() {
-		close(t.ch_started)
-		flushing := false
-		parent_stop := stop
-		for {
-			select {
-			case cmd := <-t.ch_command:
-				if cmd.p != nil {
-					t.processors[cmd.p.Name()] = cmd.p
-				} else {
-					delete(t.processors, cmd.n)
-				}
-			case <-t.ch_stopping:
-				// flush pending event
-				for {
-					select {
-					case e := <-t.ch_event:
-						t.process(e, true)
-					default:
-						close(t.ch_stopped)
-						return
-					}
-				}
-			default:
-			}
-			select {
-			case e := <-t.ch_event:
-				t.process(e, flushing)
-				if len(t.ch_event) == 0 {
-					flushing = false
-				}
-			case <-parent_stop:
-				t.Stop()
-				parent_stop = nil
-			case <-t.ch_flushing:
-				flushing = true
-			}
-		}
-	}()
+	go t.loop(stop)
 
 	return t
 }
 
 func (t selectP) Flush() {
+	t.ch_flushing <- struct{}{}
 }
 
 func makeSelectP(name string, f selectFunc) selectP {
@@ -133,11 +120,11 @@ func makeSelectP(name string, f selectFunc) selectP {
 		name:        name,
 		processors:  make(map[string]P),
 		f:           f,
-		ch_started:  make(chan struct{}),
+		state:       "INIT",
 		ch_event:    make(chan *event.Event, 16),
-		ch_command:  make(chan selectPCmd, 1),
 		ch_flushing: make(chan struct{}),
-		ch_stopping: make(chan struct{}),
+		ch_add:      make(chan P),
+		ch_delete:   make(chan string),
 		ch_stopped:  make(chan struct{}),
 	}
 
