@@ -1,10 +1,10 @@
-package logger
+package console
 
 import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/jamesruan/golf/event"
+	"github.com/jamesruan/golf"
 	"io"
 	"io/ioutil"
 	"os"
@@ -14,43 +14,52 @@ import (
 )
 
 var (
-	DefaultStderrLogger = NewConsoleLogger(os.Stderr, LstdFlags)
-	DiscardLogger       = NewConsoleLogger(ioutil.Discard, LstdFlags)
+	Default = New(os.Stderr, LstdFlags, 16)
+	Discard = New(ioutil.Discard, LstdFlags, 16)
 )
 
-func NewConsoleLogger(out io.Writer, flags ConsoleLoggerFlags) *ConsoleLogger {
-	return &ConsoleLogger{
+type ConsoleSink struct {
+	out    io.Writer
+	bufout *bufio.Writer
+	flags  ConsoleSinkFlags
+	queue  chan *golf.Event
+	done   chan struct{}
+}
+
+func New(out io.Writer, flags ConsoleSinkFlags, bufferSize int) *ConsoleSink {
+	queue := make(chan *golf.Event, bufferSize)
+	done := make(chan struct{})
+	sink := &ConsoleSink{
 		out:    out,
 		bufout: bufio.NewWriter(out),
 		flags:  flags,
-		queue:  make(chan *event.Event, 128),
+		queue:  queue,
+		done:   done,
 	}
+	go func() {
+		for e := range queue {
+			sink.log(e)
+		}
+		close(done)
+	}()
+	return sink
 }
 
-type ConsoleLogger struct {
-	out    io.Writer
-	bufout *bufio.Writer
-	flags  ConsoleLoggerFlags
-	queue  chan *event.Event
+func (l ConsoleSink) Name() string {
+	return "console"
 }
 
-var bufPool = &sync.Pool{
-	New: func() interface{} {
-		buf := make([]byte, 0, 256)
-		return bytes.NewBuffer(buf)
-	},
+func (l ConsoleSink) Close() {
+	close(l.queue)
+	<-l.done
 }
 
-func (l ConsoleLogger) Queue() <-chan *event.Event {
-	return l.queue
-}
-
-func (l ConsoleLogger) Enqueue(e *event.Event) {
+func (l ConsoleSink) Handle(e *golf.Event) {
 	l.queue <- e
 }
 
-func (l *ConsoleLogger) fmt(b *bytes.Buffer, e *event.Event) {
-	simple := e.Level == event.NOLEVEL
+func (l *ConsoleSink) fmt(b *bytes.Buffer, e *golf.Event) {
+	simple := e.Level == golf.NOLEVEL
 	if !simple {
 		if l.flags&CLcolor != 0 {
 			fmt.Fprintf(b, "\x1b[%dm%s\x1b[0m ", l.levelColor(e.Level), e.Level)
@@ -96,9 +105,13 @@ func (l *ConsoleLogger) fmt(b *bytes.Buffer, e *event.Event) {
 		b.WriteString(e.Fmt)
 	}
 
-	if len(e.Fields) > 0 {
-		for k, v := range e.Fields {
-			fmt.Fprintf(b, "%s=%v ", k, v)
+	if e.Fields.Length() > 0 {
+		list := e.Fields.Map(func(x interface{}) interface{} {
+			return x
+		})
+		for _, field := range list {
+			f := field.(golf.EventField)
+			fmt.Fprintf(b, " %s=%v", f.Name, f.Value)
 		}
 	}
 
@@ -119,7 +132,7 @@ func (l *ConsoleLogger) fmt(b *bytes.Buffer, e *event.Event) {
 	b.WriteByte(byte('\n'))
 }
 
-func (l *ConsoleLogger) Log(e *event.Event) {
+func (l *ConsoleSink) log(e *golf.Event) {
 	b := bufPool.Get().(*bytes.Buffer)
 	l.fmt(b, e)
 	l.bufout.Write(b.Bytes())
@@ -130,28 +143,24 @@ func (l *ConsoleLogger) Log(e *event.Event) {
 	}
 }
 
-func (l *ConsoleLogger) Flush() {
-	l.bufout.Flush()
-}
-
-func (ConsoleLogger) levelColor(l event.Level) int {
+func (ConsoleSink) levelColor(l golf.Level) int {
 	switch l {
-	case event.DEBUG:
+	case golf.DEBUG:
 		return 37 //white
-	case event.INFO:
+	case golf.INFO:
 		return 34 //blue
-	case event.WARN:
+	case golf.WARN:
 		return 33 //yellow
-	case event.LOG:
-		return 32 //green
-	case event.ERROR:
+	case golf.ERROR:
+		fallthrough
+	case golf.FATAL:
 		return 31 //red
 	default:
 		return 0 // nocolor
 	}
 }
 
-type ConsoleLoggerFlags uint32
+type ConsoleSinkFlags uint32
 
 const (
 	Llongfile     = 1 << iota           // full file name and line number: /a/b/c/d.go:23
@@ -161,3 +170,10 @@ const (
 	CLcolor                             // colorize
 	LstdFlags     = CLcolor | Ldatetime // initial values for the standard logger
 )
+
+var bufPool = &sync.Pool{
+	New: func() interface{} {
+		buf := make([]byte, 0, 256)
+		return bytes.NewBuffer(buf)
+	},
+}
