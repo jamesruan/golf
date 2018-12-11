@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	Default = New(os.Stderr, LstdFlags, 16)
-	Discard = New(ioutil.Discard, LstdFlags, 16)
+	Default = golf.NewSinkHandler(New(os.Stderr, LstdFlags, 256))
+	Discard = golf.NewSinkHandler(New(ioutil.Discard, LstdFlags, 256))
 )
 
 type ConsoleSink struct {
@@ -59,15 +59,6 @@ func (l ConsoleSink) Handle(e *golf.Event) {
 }
 
 func (l *ConsoleSink) fmt(b *bytes.Buffer, e *golf.Event) {
-	simple := e.Level == golf.NOLEVEL
-	if !simple {
-		if l.flags&CLcolor != 0 {
-			fmt.Fprintf(b, "\x1b[%dm%s\x1b[0m ", l.levelColor(e.Level), e.Level)
-		} else {
-			fmt.Fprintf(b, "[%s] ", e.Level)
-		}
-	}
-
 	if l.flags&Ldatetime != 0 {
 		var s string
 		if l.flags&Lmicroseconds != 0 {
@@ -76,6 +67,15 @@ func (l *ConsoleSink) fmt(b *bytes.Buffer, e *golf.Event) {
 			s = e.Time.Format("2006/01/02 15:04:05 ")
 		}
 		b.WriteString(s)
+	}
+
+	simple := e.Level == golf.NOLEVEL
+	if !simple {
+		if l.flags&CLcolor != 0 {
+			fmt.Fprintf(b, "\x1b[%dm%s\x1b[0m ", l.levelColor(e.Level), e.Level)
+		} else {
+			fmt.Fprintf(b, "[%s] ", e.Level)
+		}
 	}
 
 	if len(e.Topic) > 0 {
@@ -105,11 +105,10 @@ func (l *ConsoleSink) fmt(b *bytes.Buffer, e *golf.Event) {
 		b.WriteString(e.Fmt)
 	}
 
-	if e.Fields.Length() > 0 {
-		list := e.Fields.Map(func(x interface{}) interface{} {
-			return x
-		})
-		for _, field := range list {
+	if l := e.Fields.Length(); l > 0 {
+		var i uint
+		for i = 0; i < l; i++ {
+			field, _ := e.Fields.Get(i)
 			f := field.(golf.EventField)
 			fmt.Fprintf(b, " %s=%v", f.Name, f.Value)
 		}
