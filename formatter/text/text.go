@@ -1,79 +1,29 @@
-package console
+package text
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"github.com/jamesruan/golf"
-	"io"
-	"io/ioutil"
-	"os"
 	"path"
 	"runtime"
-	"sync"
-	"time"
 )
 
 var (
-	DefaultMaxFlushDelay = 50 * time.Millisecond
-	DefaultHiRes         = golf.NewSinkHandler(New(os.Stderr, Ldatetime|Lmicroseconds, 16, DefaultMaxFlushDelay))
-	DefaultPlainText     = golf.NewSinkHandler(New(os.Stderr, Ldatetime, 16, DefaultMaxFlushDelay))
-	Default              = golf.NewSinkHandler(New(os.Stderr, LstdFlags, 16, DefaultMaxFlushDelay))
-	Discard              = golf.NewSinkHandler(New(ioutil.Discard, LstdFlags, 16, DefaultMaxFlushDelay))
+	Console = New(Ldatetime | CLcolor)
 )
 
-type ConsoleSink struct {
-	out    io.Writer
-	bufout *bufio.Writer
-	flags  ConsoleSinkFlags
-	queue  chan *golf.Event
-	done   chan struct{}
+type TextFormatter struct {
+	flags ConsoleSinkFlags
 }
 
-func New(out io.Writer, flags ConsoleSinkFlags, bufferSize int, maxDelay time.Duration) *ConsoleSink {
-	queue := make(chan *golf.Event, bufferSize)
-	done := make(chan struct{})
-	sink := &ConsoleSink{
-		out:    out,
-		bufout: bufio.NewWriter(out),
-		flags:  flags,
-		queue:  queue,
-		done:   done,
+func New(flags ConsoleSinkFlags) *TextFormatter {
+	return &TextFormatter{
+		flags: flags,
 	}
-	go func() {
-		ticker := time.NewTicker(maxDelay)
-		ch := ticker.C
-		for {
-			select {
-			case e, ok := <-queue:
-				if !ok {
-					sink.bufout.Flush()
-					ticker.Stop()
-					close(done)
-					return
-				}
-				sink.log(e)
-				ch = ticker.C
-			case <-ch:
-				// flush every 100 microsecond if not flushed before
-				sink.bufout.Flush()
-				ch = nil
-			}
-		}
-	}()
-	return sink
 }
 
-func (l ConsoleSink) Close() {
-	close(l.queue)
-	<-l.done
-}
-
-func (l ConsoleSink) Handle(e *golf.Event) {
-	l.queue <- e
-}
-
-func (l *ConsoleSink) fmt(b *bytes.Buffer, e *golf.Event) {
+func (l *TextFormatter) Format(e *golf.Event) []byte {
+	b := new(bytes.Buffer)
 	if l.flags&Ldatetime != 0 {
 		var s string
 		if l.flags&Lmicroseconds != 0 {
@@ -144,17 +94,10 @@ func (l *ConsoleSink) fmt(b *bytes.Buffer, e *golf.Event) {
 	}
 
 	b.WriteByte(byte('\n'))
+	return b.Bytes()
 }
 
-func (l *ConsoleSink) log(e *golf.Event) {
-	b := bufPool.Get().(*bytes.Buffer)
-	l.fmt(b, e)
-	l.bufout.Write(b.Bytes())
-	b.Reset()
-	bufPool.Put(b)
-}
-
-func (ConsoleSink) levelColor(l golf.Level) int {
+func (TextFormatter) levelColor(l golf.Level) int {
 	switch l {
 	case golf.DEBUG:
 		return 37 //white
@@ -181,10 +124,3 @@ const (
 	CLcolor                             // colorize
 	LstdFlags     = CLcolor | Ldatetime // initial values for the standard logger
 )
-
-var bufPool = &sync.Pool{
-	New: func() interface{} {
-		buf := make([]byte, 0, 256)
-		return bytes.NewBuffer(buf)
-	},
-}

@@ -2,13 +2,16 @@ package bench
 
 import (
 	"github.com/jamesruan/golf"
-	"github.com/jamesruan/golf/sinks/console"
+	"github.com/jamesruan/golf/formatter/text"
+	"github.com/jamesruan/golf/handlers"
+	"io/ioutil"
 	"testing"
 )
 
 func BenchmarkDefault(b *testing.B) {
-	infohandler := golf.NewLevelHandler(golf.INFO, console.Discard, nil)
-	broadcastor := golf.NewBroadcastHandler()
+	discardTextHandler := golf.DefaultStreamSink(ioutil.Discard, text.Console)
+	infohandler := handlers.NewLevel(golf.INFO, discardTextHandler, nil)
+	broadcastor := handlers.NewBroadcast()
 	broadcastor.AddHandler("1", infohandler)
 	broadcastor.AddHandler("2", infohandler)
 	broadcastor.AddHandler("3", infohandler)

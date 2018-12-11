@@ -2,15 +2,18 @@ package golf
 
 import (
 	"github.com/jamesruan/golf"
-	"github.com/jamesruan/golf/sinks/console"
+	"github.com/jamesruan/golf/formatter/text"
+	"github.com/jamesruan/golf/handlers"
+	"os"
 	"testing"
 	"time"
 )
 
 func TestNewTopicEntry(t *testing.T) {
-	broadcastor := golf.NewBroadcastHandler()
-	broadcastor.AddHandler("raw", console.Default)
-	infohandler := golf.NewLevelHandler(golf.INFO, console.Default, nil)
+	stderrTextHandler := golf.DefaultStreamSink(os.Stderr, text.Console)
+	broadcastor := handlers.NewBroadcast()
+	broadcastor.AddHandler("raw", stderrTextHandler)
+	infohandler := handlers.NewLevel(golf.INFO, stderrTextHandler, nil)
 	broadcastor.AddHandler("info", infohandler)
 	test_entry := golf.NewTopicEntry("test", broadcastor)
 	test_entry.Debugf("1")

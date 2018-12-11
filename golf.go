@@ -4,10 +4,8 @@ import (
 	"sync"
 )
 
-// Sink is the last handler for an Event
-type Sink interface {
-	Handler
-	Close()
+type Formatter interface {
+	Format(e *Event) []byte
 }
 
 var sinkWg sync.WaitGroup
@@ -46,3 +44,8 @@ const (
 	FATAL
 	NOLEVEL
 )
+
+// Handler handles Event.
+type Handler interface {
+	Handle(*Event)
+}
