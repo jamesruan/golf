@@ -1,10 +1,10 @@
 package golf
 
-type mapHandler struct {
-	name string
-	smap *handlerMap
+// Handler handles Event.
+type Handler interface {
+	Handle(*Event)
 }
 
-func (h mapHandler) Name() string {
-	return h.name
+type mapHandler struct {
+	smap *handlerMap
 }

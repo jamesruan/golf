@@ -8,13 +8,8 @@ type BroadcastHandler mapHandler
 // The order of calling registered handlers is random.
 func NewBroadcastHandler() *BroadcastHandler {
 	return &BroadcastHandler{
-		name: "_broadcast",
 		smap: new(handlerMap),
 	}
-}
-
-func (h BroadcastHandler) Name() string {
-	return h.name
 }
 
 func (h *BroadcastHandler) Handle(e *Event) {

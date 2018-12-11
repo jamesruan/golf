@@ -27,7 +27,6 @@ func NewLevelHandler(lvl Level, qualified Handler, below Handler) *LevelHandler 
 
 	return &LevelHandler{
 		mapHandler: mapHandler{
-			name: "_level_",
 			smap: m,
 		},
 		level: level,
@@ -47,11 +46,6 @@ func (h *LevelHandler) Handle(e *Event) {
 			below.Handle(e)
 		}
 	}
-}
-
-func (h *LevelHandler) Name() string {
-	level := h.level.Load().(Level)
-	return h.mapHandler.name + level.String()
 }
 
 // SetLevel atomically sets the level.

@@ -4,12 +4,6 @@ import (
 	"sync"
 )
 
-// Handler handles Event.
-type Handler interface {
-	Name() string
-	Handle(*Event)
-}
-
 // Sink is the last handler for an Event
 type Sink interface {
 	Handler

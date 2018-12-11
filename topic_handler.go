@@ -8,7 +8,6 @@ type TopicHandler mapHandler
 // If no suitable handler is configured, the Event is dropped.
 func NewTopicHandler() *TopicHandler {
 	return &TopicHandler{
-		name: "_topic",
 		smap: new(handlerMap),
 	}
 }

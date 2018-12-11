@@ -9,10 +9,6 @@ func (h *SinkHandler) Handle(e *Event) {
 	h.sink.Handle(e)
 }
 
-func (h SinkHandler) Name() string {
-	return h.sink.Name()
-}
-
 func NewSinkHandler(sink Sink) *SinkHandler {
 	sinkWg.Add(1)
 	go func() {

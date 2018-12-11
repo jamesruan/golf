@@ -64,10 +64,6 @@ func New(out io.Writer, flags ConsoleSinkFlags, bufferSize int, maxDelay time.Du
 	return sink
 }
 
-func (l ConsoleSink) Name() string {
-	return "console"
-}
-
 func (l ConsoleSink) Close() {
 	close(l.queue)
 	<-l.done
