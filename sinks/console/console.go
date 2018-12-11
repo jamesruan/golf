@@ -11,11 +11,15 @@ import (
 	"path"
 	"runtime"
 	"sync"
+	"time"
 )
 
 var (
-	Default = golf.NewSinkHandler(New(os.Stderr, LstdFlags, 256))
-	Discard = golf.NewSinkHandler(New(ioutil.Discard, LstdFlags, 256))
+	DefaultMaxFlushDelay = 50 * time.Millisecond
+	DefaultHiRes         = golf.NewSinkHandler(New(os.Stderr, Ldatetime|Lmicroseconds, 16, DefaultMaxFlushDelay))
+	DefaultPlainText     = golf.NewSinkHandler(New(os.Stderr, Ldatetime, 16, DefaultMaxFlushDelay))
+	Default              = golf.NewSinkHandler(New(os.Stderr, LstdFlags, 16, DefaultMaxFlushDelay))
+	Discard              = golf.NewSinkHandler(New(ioutil.Discard, LstdFlags, 16, DefaultMaxFlushDelay))
 )
 
 type ConsoleSink struct {
@@ -26,7 +30,7 @@ type ConsoleSink struct {
 	done   chan struct{}
 }
 
-func New(out io.Writer, flags ConsoleSinkFlags, bufferSize int) *ConsoleSink {
+func New(out io.Writer, flags ConsoleSinkFlags, bufferSize int, maxDelay time.Duration) *ConsoleSink {
 	queue := make(chan *golf.Event, bufferSize)
 	done := make(chan struct{})
 	sink := &ConsoleSink{
@@ -37,10 +41,25 @@ func New(out io.Writer, flags ConsoleSinkFlags, bufferSize int) *ConsoleSink {
 		done:   done,
 	}
 	go func() {
-		for e := range queue {
-			sink.log(e)
+		ticker := time.NewTicker(maxDelay)
+		ch := ticker.C
+		for {
+			select {
+			case e, ok := <-queue:
+				if !ok {
+					sink.bufout.Flush()
+					ticker.Stop()
+					close(done)
+					return
+				}
+				sink.log(e)
+				ch = ticker.C
+			case <-ch:
+				// flush every 100 microsecond if not flushed before
+				sink.bufout.Flush()
+				ch = nil
+			}
 		}
-		close(done)
 	}()
 	return sink
 }
@@ -137,9 +156,6 @@ func (l *ConsoleSink) log(e *golf.Event) {
 	l.bufout.Write(b.Bytes())
 	b.Reset()
 	bufPool.Put(b)
-	if len(l.queue) == 0 {
-		l.bufout.Flush()
-	}
 }
 
 func (ConsoleSink) levelColor(l golf.Level) int {
