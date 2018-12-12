@@ -1,4 +1,4 @@
-package golf
+package event
 
 import (
 	"github.com/Workiva/go-datastructures/list"
@@ -17,7 +17,7 @@ type Event struct {
 	Fields list.PersistentList // list of EventField
 }
 
-type EventField struct {
+type Field struct {
 	Name  string
 	Value interface{}
 }
@@ -51,4 +51,42 @@ func SimpleEvent(fmt string, args []interface{}, fields list.PersistentList) *Ev
 		Args:   args,
 		Fields: fields,
 	}
+}
+
+// Level the logging Level.
+type Level int
+
+func (l Level) String() string {
+	switch l {
+	case DEBUG:
+		return "DEBUG"
+	case INFO:
+		return "INFO "
+	case WARN:
+		return "WARN "
+	case ERROR:
+		return "ERROR"
+	case FATAL:
+		return "FATAL"
+	default:
+		return ""
+	}
+}
+
+const (
+	DEBUG Level = iota
+	INFO
+	WARN
+	ERROR
+	FATAL
+	NOLEVEL
+)
+
+type Formatter interface {
+	Format(e *Event) []byte
+}
+
+// Handler handles Event.
+type Handler interface {
+	Handle(*Event)
 }

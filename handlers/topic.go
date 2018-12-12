@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/jamesruan/golf"
+	"github.com/jamesruan/golf/event"
 )
 
 type Topic handlerMap
@@ -14,8 +14,8 @@ func NewTopic() *Topic {
 	return new(Topic)
 }
 
-func (h *Topic) Handle(e *golf.Event) {
-	(*handlerMap)(h).Range(func(k string, v golf.Handler) bool {
+func (h *Topic) Handle(e *event.Event) {
+	(*handlerMap)(h).Range(func(k string, v event.Handler) bool {
 		if k == e.Topic {
 			v.Handle(e)
 		}
@@ -24,7 +24,7 @@ func (h *Topic) Handle(e *golf.Event) {
 }
 
 // AddHandler adds a handler 'v' to handle 'topic'
-func (h *Topic) AddHandler(topic string, v golf.Handler) {
+func (h *Topic) AddHandler(topic string, v event.Handler) {
 	(*handlerMap)(h).Store(topic, v)
 }
 

@@ -2,6 +2,7 @@ package golf
 
 import (
 	"github.com/jamesruan/golf"
+	"github.com/jamesruan/golf/event"
 	"github.com/jamesruan/golf/formatter/text"
 	"github.com/jamesruan/golf/handlers"
 	"os"
@@ -13,14 +14,14 @@ func TestNewTopicEntry(t *testing.T) {
 	stderrTextHandler := golf.DefaultStreamSink(os.Stderr, text.Console)
 	broadcastor := handlers.NewBroadcast()
 	broadcastor.AddHandler("raw", stderrTextHandler)
-	infohandler := handlers.NewLevel(golf.INFO, stderrTextHandler, nil)
+	infohandler := handlers.NewLevel(event.INFO, stderrTextHandler, nil)
 	broadcastor.AddHandler("info", infohandler)
 	test_entry := golf.NewTopicEntry("test", broadcastor)
 	test_entry.Debugf("1")
 	test_entry.Infof("2")
 	test_entry.Warnf("3")
-	test_entry1 := test_entry.WithFields(golf.EventField{Name: "app", Value: "test"})
-	test_entry2 := test_entry1.WithFields(golf.EventField{Name: "module", Value: "testmodule"})
+	test_entry1 := test_entry.WithFields(event.Field{Name: "app", Value: "test"})
+	test_entry2 := test_entry1.WithFields(event.Field{Name: "module", Value: "testmodule"})
 	test_entry.Errorf("4")
 	time.Sleep(time.Second)
 	test_entry2.Errorf("5")

@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/jamesruan/golf"
+	"github.com/jamesruan/golf/event"
 )
 
 type Broadcast handlerMap
@@ -14,15 +14,15 @@ func NewBroadcast() *Broadcast {
 	return new(Broadcast)
 }
 
-func (h *Broadcast) Handle(e *golf.Event) {
-	(*handlerMap)(h).Range(func(name string, handler golf.Handler) bool {
+func (h *Broadcast) Handle(e *event.Event) {
+	(*handlerMap)(h).Range(func(name string, handler event.Handler) bool {
 		handler.Handle(e)
 		return true
 	})
 }
 
 //AddHandler adds handler 'v' identified as 'id'
-func (h *Broadcast) AddHandler(id string, v golf.Handler) {
+func (h *Broadcast) AddHandler(id string, v event.Handler) {
 	(*handlerMap)(h).Store(id, v)
 }
 

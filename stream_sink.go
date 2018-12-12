@@ -2,6 +2,7 @@ package golf
 
 import (
 	"bufio"
+	"github.com/jamesruan/golf/event"
 	"io"
 	"time"
 )
@@ -9,15 +10,15 @@ import (
 // StreamSink sinks event with Formatter and sink the bytes into bufferred stream
 type StreamSink struct {
 	bufout    *bufio.Writer
-	formatter Formatter
+	formatter event.Formatter
 	queue     chan []byte
 }
 
-func DefaultStreamSink(output io.Writer, formatter Formatter) *StreamSink {
+func DefaultStreamSink(output io.Writer, formatter event.Formatter) *StreamSink {
 	return NewStreamSink(output, formatter, 16, 100*time.Millisecond)
 }
 
-func NewStreamSink(output io.Writer, formatter Formatter, bufferSize uint, maxDelay time.Duration) *StreamSink {
+func NewStreamSink(output io.Writer, formatter event.Formatter, bufferSize uint, maxDelay time.Duration) *StreamSink {
 	queue := make(chan []byte, bufferSize)
 	bufout := bufio.NewWriter(output)
 	sinkWg.Add(1)
@@ -55,7 +56,7 @@ func NewStreamSink(output io.Writer, formatter Formatter, bufferSize uint, maxDe
 	}
 }
 
-func (l StreamSink) Handle(e *Event) {
+func (l StreamSink) Handle(e *event.Event) {
 	b := l.formatter.Format(e)
 	l.queue <- b
 }

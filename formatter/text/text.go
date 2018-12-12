@@ -3,7 +3,7 @@ package text
 import (
 	"bytes"
 	"fmt"
-	"github.com/jamesruan/golf"
+	"github.com/jamesruan/golf/event"
 	"path"
 	"runtime"
 )
@@ -22,7 +22,7 @@ func New(flags ConsoleSinkFlags) *TextFormatter {
 	}
 }
 
-func (l *TextFormatter) Format(e *golf.Event) []byte {
+func (l *TextFormatter) Format(e *event.Event) []byte {
 	b := new(bytes.Buffer)
 	if l.flags&Ldatetime != 0 {
 		var s string
@@ -34,7 +34,7 @@ func (l *TextFormatter) Format(e *golf.Event) []byte {
 		b.WriteString(s)
 	}
 
-	simple := e.Level == golf.NOLEVEL
+	simple := e.Level == event.NOLEVEL
 	if !simple {
 		if l.flags&CLcolor != 0 {
 			fmt.Fprintf(b, "\x1b[%dm%s\x1b[0m ", l.levelColor(e.Level), e.Level)
@@ -74,7 +74,7 @@ func (l *TextFormatter) Format(e *golf.Event) []byte {
 		var i uint
 		for i = 0; i < l; i++ {
 			field, _ := e.Fields.Get(i)
-			f := field.(golf.EventField)
+			f := field.(event.Field)
 			fmt.Fprintf(b, " %s=%v", f.Name, f.Value)
 		}
 	}
@@ -97,17 +97,17 @@ func (l *TextFormatter) Format(e *golf.Event) []byte {
 	return b.Bytes()
 }
 
-func (TextFormatter) levelColor(l golf.Level) int {
+func (TextFormatter) levelColor(l event.Level) int {
 	switch l {
-	case golf.DEBUG:
+	case event.DEBUG:
 		return 37 //white
-	case golf.INFO:
+	case event.INFO:
 		return 34 //blue
-	case golf.WARN:
+	case event.WARN:
 		return 33 //yellow
-	case golf.ERROR:
+	case event.ERROR:
 		fallthrough
-	case golf.FATAL:
+	case event.FATAL:
 		return 31 //red
 	default:
 		return 0 // nocolor
