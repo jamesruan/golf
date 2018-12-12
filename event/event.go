@@ -24,7 +24,7 @@ type Field struct {
 
 // DefaultEvent records level, topic, callstack.
 func DefaultEvent(calldepth int, topic string, level Level, fmt string, args []interface{}, fields list.PersistentList) *Event {
-	pc := make([]uintptr, 32)
+	pc := make([]uintptr, 16)
 	n := runtime.Callers(calldepth, pc)
 	if n > 0 {
 		pc = pc[:n]

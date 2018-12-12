@@ -9,7 +9,8 @@ import (
 )
 
 var (
-	Console = New(Ldatetime | CLcolor)
+	Console = New(Ldatetime | Lmicroseconds | CLcolor)
+	Plain   = New(Ldatetime | Lmicroseconds)
 )
 
 type TextFormatter struct {

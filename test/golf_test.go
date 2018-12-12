@@ -11,11 +11,15 @@ import (
 )
 
 func TestNewTopicEntry(t *testing.T) {
-	stderrTextHandler := golf.DefaultStreamSink(os.Stderr, text.Console)
+
 	broadcastor := handlers.NewBroadcast()
-	broadcastor.AddHandler("raw", stderrTextHandler)
-	infohandler := handlers.NewLevel(event.INFO, stderrTextHandler, nil)
+	callstackSink := golf.DefaultStreamSink(os.Stderr, text.New(text.Lframes))
+	broadcastor.AddHandler("callstack", callstackSink)
+	broadcastor.AddHandler("raw", golf.DefaultPlainSink)
+
+	infohandler := handlers.NewLevel(event.INFO, golf.DefaultSink, nil)
 	broadcastor.AddHandler("info", infohandler)
+
 	test_entry := golf.NewTopicEntry("test", broadcastor)
 	test_entry.Debugf("1")
 	test_entry.Infof("2")
