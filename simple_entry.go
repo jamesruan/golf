@@ -18,7 +18,7 @@ func NewSimpleEntry(handler event.Handler) *SimpleEntry {
 	}
 }
 
-func (t *SimpleEntry) WithFields(fields ...event.Field) *SimpleEntry {
+func (t *SimpleEntry) WithFields(fields ...event.Field) Entry {
 	l := t.fields
 	for _, field := range fields {
 		l = l.Add(field)

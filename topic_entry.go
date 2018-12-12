@@ -20,7 +20,7 @@ func NewTopicEntry(topic string, handler event.Handler) *TopicEntry {
 	}
 }
 
-func (t *TopicEntry) WithFields(fields ...event.Field) *TopicEntry {
+func (t *TopicEntry) WithFields(fields ...event.Field) Entry {
 	l := t.fields
 	for _, field := range fields {
 		l = l.Add(field)
