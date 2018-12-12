@@ -12,7 +12,7 @@ type TopicEntry struct {
 	handler event.Handler
 }
 
-func NewTopicEntry(topic string, handler event.Handler) *TopicEntry {
+func NewTopicEntry(topic string, handler event.Handler) Entry {
 	return &TopicEntry{
 		topic:   topic,
 		fields:  list.Empty,

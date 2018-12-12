@@ -11,7 +11,7 @@ type SimpleEntry struct {
 	handler event.Handler
 }
 
-func NewSimpleEntry(handler event.Handler) *SimpleEntry {
+func NewSimpleEntry(handler event.Handler) Entry {
 	return &SimpleEntry{
 		fields:  list.Empty,
 		handler: handler,

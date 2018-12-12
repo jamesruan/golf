@@ -40,12 +40,16 @@ func (l *TextFormatter) Format(e *event.Event) []byte {
 		if l.flags&CLcolor != 0 {
 			fmt.Fprintf(b, "\x1b[%dm%s\x1b[0m ", l.levelColor(e.Level), e.Level)
 		} else {
-			fmt.Fprintf(b, "[%s] ", e.Level)
+			fmt.Fprintf(b, "%s ", e.Level)
 		}
 	}
 
 	if len(e.Topic) > 0 {
-		fmt.Fprintf(b, "\x1b[92m%s\x1b[0m ", e.Topic)
+		if l.flags&CLcolor != 0 {
+			fmt.Fprintf(b, "\x1b[92m%s\x1b[0m ", e.Topic)
+		} else {
+			fmt.Fprintf(b, "%s ", e.Topic)
+		}
 	}
 
 	if !simple && l.flags&Lframes == 0 {
@@ -72,6 +76,7 @@ func (l *TextFormatter) Format(e *event.Event) []byte {
 	}
 
 	if l := e.Fields.Length(); l > 0 {
+		fmt.Fprint(b, " |")
 		var i uint
 		for i = 0; i < l; i++ {
 			field, _ := e.Fields.Get(i)
