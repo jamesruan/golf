@@ -34,6 +34,22 @@ func (t *SimpleEntry) Output(calldepth int, evel event.Level, format string, arg
 	t.handler.Handle(e)
 }
 
+func (t *SimpleEntry) OutputFatal(calldepth int, evel event.Level, format string, args []interface{}) {
+	e := event.SimpleEvent(format, args, t.fields)
+	t.handler.Handle(e)
+	close(sinkCloseSignal)
+	sinkWg.Wait()
+	os.Exit(-1)
+}
+
+func (t *SimpleEntry) OutputPanic(calldepth int, evel event.Level, format string, args []interface{}) {
+	e := event.SimpleEvent(format, args, t.fields)
+	t.handler.Handle(e)
+	close(sinkCloseSignal)
+	sinkWg.Wait()
+	panic("panic")
+}
+
 func (t *SimpleEntry) Debugf(format string, args ...interface{}) {
 	t.Output(0, event.NOLEVEL, format, args)
 }
@@ -55,4 +71,11 @@ func (t *SimpleEntry) Fatalf(format string, args ...interface{}) {
 	close(sinkCloseSignal)
 	sinkWg.Wait()
 	os.Exit(-1)
+}
+
+func (t *SimpleEntry) Panicf(format string, args ...interface{}) {
+	t.Output(0, event.NOLEVEL, format, args)
+	close(sinkCloseSignal)
+	sinkWg.Wait()
+	panic("panic")
 }
