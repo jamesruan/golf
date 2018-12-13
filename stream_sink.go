@@ -3,9 +3,22 @@ package golf
 import (
 	"bufio"
 	"github.com/jamesruan/golf/event"
-	"io"
+	"github.com/jamesruan/golf/logger"
+	"os"
+	"sync"
 	"time"
 )
+
+var sinkWg sync.WaitGroup
+var sinkCloseSignal chan struct{} = make(chan struct{})
+
+// used for signalling the logger to flush and rotate when the logger implements logger.RotateLogger
+var SinkRotateSignal chan os.Signal = make(chan os.Signal, 1)
+
+func closeAllSink() {
+	close(sinkCloseSignal)
+	sinkWg.Wait()
+}
 
 // StreamSink sinks event with Formatter and sink the bytes into bufferred stream
 type StreamSink struct {
@@ -14,11 +27,11 @@ type StreamSink struct {
 	queue     chan []byte
 }
 
-func DefaultStreamSink(output io.Writer, formatter event.Formatter) *StreamSink {
+func DefaultStreamSink(output logger.StreamLogger, formatter event.Formatter) *StreamSink {
 	return NewStreamSink(output, formatter, 16, 100*time.Millisecond)
 }
 
-func NewStreamSink(output io.Writer, formatter event.Formatter, bufferSize uint, maxDelay time.Duration) *StreamSink {
+func NewStreamSink(output logger.StreamLogger, formatter event.Formatter, bufferSize uint, maxDelay time.Duration) *StreamSink {
 	queue := make(chan []byte, bufferSize)
 	bufout := bufio.NewWriter(output)
 	sinkWg.Add(1)
@@ -28,6 +41,14 @@ func NewStreamSink(output io.Writer, formatter event.Formatter, bufferSize uint,
 		ch := ticker.C
 		for {
 			select {
+			case <-SinkRotateSignal:
+				if r, ok := output.(logger.RotateLogger); ok {
+					bufout.Flush()
+					err := r.Rotate()
+					if err != nil {
+						panic(err)
+					}
+				}
 			case <-sinkCloseSignal:
 				for {
 					select {

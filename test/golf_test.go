@@ -5,7 +5,7 @@ import (
 	"github.com/jamesruan/golf/event"
 	"github.com/jamesruan/golf/formatter/text"
 	"github.com/jamesruan/golf/handlers"
-	"os"
+	"github.com/jamesruan/golf/logger"
 	"testing"
 	"time"
 )
@@ -13,7 +13,7 @@ import (
 func TestNewTopicEntry(t *testing.T) {
 
 	broadcastor := handlers.NewBroadcast()
-	callstackSink := golf.DefaultStreamSink(os.Stderr, text.New(text.Lframes))
+	callstackSink := golf.DefaultStreamSink(logger.Stderr, text.New(text.Lframes))
 	broadcastor.AddHandler("callstack", callstackSink)
 	broadcastor.AddHandler("raw", golf.DefaultPlainSink)
 

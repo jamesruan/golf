@@ -3,23 +3,13 @@ package golf
 import (
 	"github.com/jamesruan/golf/formatter/discard"
 	"github.com/jamesruan/golf/formatter/text"
-	"io/ioutil"
-	"os"
-	"sync"
+	"github.com/jamesruan/golf/logger"
 )
 
-var sinkWg sync.WaitGroup
-var sinkCloseSignal chan struct{} = make(chan struct{})
-
-func closeAllSink() {
-	close(sinkCloseSignal)
-	sinkWg.Wait()
-}
-
 var (
-	DefaultSink      = DefaultStreamSink(os.Stderr, text.Console)
-	DefaultPlainSink = DefaultStreamSink(os.Stderr, text.Plain)
-	DiscardSink      = DefaultStreamSink(ioutil.Discard, discard.Default)
+	DefaultSink      = DefaultStreamSink(logger.Stderr, text.Console)
+	DefaultPlainSink = DefaultStreamSink(logger.Stderr, text.Plain)
+	DiscardSink      = DefaultStreamSink(logger.Discard, discard.Default)
 )
 
 var (
