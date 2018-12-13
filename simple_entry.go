@@ -29,29 +29,29 @@ func (t *SimpleEntry) WithFields(fields ...event.Field) Entry {
 	}
 }
 
-func (t *SimpleEntry) Debugf(format string, args ...interface{}) {
+func (t *SimpleEntry) Output(calldepth int, evel event.Level, format string, args []interface{}) {
 	e := event.SimpleEvent(format, args, t.fields)
 	t.handler.Handle(e)
+}
+
+func (t *SimpleEntry) Debugf(format string, args ...interface{}) {
+	t.Output(0, event.NOLEVEL, format, args)
 }
 
 func (t *SimpleEntry) Infof(format string, args ...interface{}) {
-	e := event.SimpleEvent(format, args, t.fields)
-	t.handler.Handle(e)
+	t.Output(0, event.NOLEVEL, format, args)
 }
 
 func (t *SimpleEntry) Warnf(format string, args ...interface{}) {
-	e := event.SimpleEvent(format, args, t.fields)
-	t.handler.Handle(e)
+	t.Output(0, event.NOLEVEL, format, args)
 }
 
 func (t *SimpleEntry) Errorf(format string, args ...interface{}) {
-	e := event.SimpleEvent(format, args, t.fields)
-	t.handler.Handle(e)
+	t.Output(0, event.NOLEVEL, format, args)
 }
 
 func (t *SimpleEntry) Fatalf(format string, args ...interface{}) {
-	e := event.SimpleEvent(format, args, t.fields)
-	t.handler.Handle(e)
+	t.Output(0, event.NOLEVEL, format, args)
 	close(sinkCloseSignal)
 	sinkWg.Wait()
 	os.Exit(-1)

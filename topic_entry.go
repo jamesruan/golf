@@ -32,29 +32,29 @@ func (t *TopicEntry) WithFields(fields ...event.Field) Entry {
 	}
 }
 
-func (t *TopicEntry) Debugf(format string, args ...interface{}) {
-	e := event.DefaultEvent(3, t.topic, event.DEBUG, format, args, t.fields)
+func (t *TopicEntry) Output(calldepth int, level event.Level, format string, args []interface{}) {
+	e := event.DefaultEvent(3+calldepth, t.topic, level, format, args, t.fields)
 	t.handler.Handle(e)
+}
+
+func (t *TopicEntry) Debugf(format string, args ...interface{}) {
+	t.Output(1, event.DEBUG, format, args)
 }
 
 func (t *TopicEntry) Infof(format string, args ...interface{}) {
-	e := event.DefaultEvent(3, t.topic, event.INFO, format, args, t.fields)
-	t.handler.Handle(e)
+	t.Output(1, event.INFO, format, args)
 }
 
 func (t *TopicEntry) Warnf(format string, args ...interface{}) {
-	e := event.DefaultEvent(3, t.topic, event.WARN, format, args, t.fields)
-	t.handler.Handle(e)
+	t.Output(1, event.WARN, format, args)
 }
 
 func (t *TopicEntry) Errorf(format string, args ...interface{}) {
-	e := event.DefaultEvent(3, t.topic, event.ERROR, format, args, t.fields)
-	t.handler.Handle(e)
+	t.Output(1, event.ERROR, format, args)
 }
 
 func (t *TopicEntry) Fatalf(format string, args ...interface{}) {
-	e := event.DefaultEvent(3, t.topic, event.FATAL, format, args, t.fields)
-	t.handler.Handle(e)
+	t.Output(1, event.FATAL, format, args)
 	close(sinkCloseSignal)
 	sinkWg.Wait()
 	os.Exit(-1)

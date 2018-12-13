@@ -5,6 +5,7 @@ import (
 )
 
 type Entry interface {
+	Output(calldepth int, level event.Level, format string, args []interface{})
 	Debugf(format string, args ...interface{})
 	Infof(format string, args ...interface{})
 	Warnf(format string, args ...interface{})
