@@ -1,5 +1,7 @@
 # Go LOggering Framework
 
+See documents [![GoDoc](https://godoc.org/github.com/jamesruan/golf?status.svg)](https://godoc.org/github.com/jamesruan/golf).
+
 ## Features and TODOs
    - [X] Entry -> Handler... -> Logger architecture where Logger runs in a separate goroutine and allows asynchronous logging.
    - [X] Flexible handlers that can broadcast and forward logging events to logger in different condition.
