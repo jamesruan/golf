@@ -67,15 +67,9 @@ func (t *SimpleEntry) Errorf(format string, args ...interface{}) {
 }
 
 func (t *SimpleEntry) Fatalf(format string, args ...interface{}) {
-	t.Output(0, event.NOLEVEL, format, args)
-	close(sinkCloseSignal)
-	sinkWg.Wait()
-	os.Exit(-1)
+	t.OutputFatal(0, event.NOLEVEL, format, args)
 }
 
 func (t *SimpleEntry) Panicf(format string, args ...interface{}) {
-	t.Output(0, event.NOLEVEL, format, args)
-	close(sinkCloseSignal)
-	sinkWg.Wait()
-	panic("panic")
+	t.OutputPanic(0, event.NOLEVEL, format, args)
 }

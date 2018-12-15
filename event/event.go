@@ -68,6 +68,8 @@ func (l Level) String() string {
 		return "ERROR"
 	case FATAL:
 		return "FATAL"
+	case PANIC:
+		return "PANIC"
 	default:
 		return ""
 	}
@@ -79,6 +81,7 @@ const (
 	WARN
 	ERROR
 	FATAL
+	PANIC
 	NOLEVEL
 )
 
