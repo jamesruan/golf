@@ -14,3 +14,28 @@ See documents [![GoDoc](https://godoc.org/github.com/jamesruan/golf?status.svg)]
      - [X] Call stack print.
      - [X] Calling position (file:line).
      - [X] Line-bufferred output.
+
+## Example
+
+```go
+import (
+	"github.com/jamesruan/golf"
+	"github.com/jamesruan/golf/event"
+)
+
+func main() {
+	logger := golf.DefaultEntry
+	logger.Infof("Hello, World!")
+
+	topic_logger := golf.NewTopicEntry("mytopic", golf.DefaultSink)
+	topic_logger.Infof("log with topic")
+
+	field_logger := topic_logger.WithFields(event.Field{
+		Name: "field",
+		Value: "field_value",
+	})
+
+	field_logger.Infof("log with field")
+	field_logger.Fatalf("make sure log is flushed")
+}
+```
