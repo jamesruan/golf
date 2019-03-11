@@ -7,7 +7,6 @@ import (
 	"github.com/jamesruan/golf/handlers"
 	"github.com/jamesruan/golf/logger"
 	"testing"
-	"time"
 )
 
 func TestNewTopicEntry(t *testing.T) {
@@ -27,7 +26,6 @@ func TestNewTopicEntry(t *testing.T) {
 	test_entry1 := test_entry.WithFields(event.Field{Name: "app", Value: "test"})
 	test_entry2 := test_entry1.WithFields(event.Field{Name: "module", Value: "testmodule"})
 	test_entry.Errorf("4")
-	time.Sleep(time.Second)
 	test_entry2.Errorf("5")
 	test_entry1.Fatalf("5")
 }

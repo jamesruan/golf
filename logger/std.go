@@ -6,10 +6,8 @@ import (
 	"os"
 )
 
-type StreamLogger = io.Writer
-
 type RotateLogger interface {
-	StreamLogger
+	io.Writer
 	Rotate() error
 }
 

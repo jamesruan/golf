@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"github.com/jamesruan/golf/event"
 	"github.com/jamesruan/golf/logger"
-	"time"
+	"io"
 )
 
 // StreamSink sinks event with Formatter and sink the bytes into bufferred stream
@@ -12,26 +12,21 @@ type StreamSink struct {
 	sinkBase
 	bufout    *bufio.Writer
 	formatter event.Formatter
-	queue     chan []byte
 }
 
-func DefaultStreamSink(output logger.StreamLogger, formatter event.Formatter) *StreamSink {
-	return NewStreamSink(output, formatter, 16, 100*time.Millisecond)
+func DefaultStreamSink(output io.Writer, formatter event.Formatter) *StreamSink {
+	return NewStreamSink(output, formatter)
 }
 
-func NewStreamSink(output logger.StreamLogger, formatter event.Formatter, bufferSize uint, maxDelay time.Duration) *StreamSink {
-	queue := make(chan []byte, bufferSize)
+func NewStreamSink(output io.Writer, formatter event.Formatter) *StreamSink {
 	bufout := bufio.NewWriter(output)
 	ss := &StreamSink{
 		bufout:    bufout,
 		formatter: formatter,
-		queue:     queue,
 	}
 	ss.register()
 	go func() {
 		defer ss.deregister()
-		ticker := time.NewTicker(maxDelay)
-		ch := ticker.C
 		for {
 			select {
 			case <-SinkRotateSignal:
@@ -43,30 +38,14 @@ func NewStreamSink(output logger.StreamLogger, formatter event.Formatter, buffer
 					}
 				}
 			case <-ss.closing():
-				for {
-					select {
-					case b := <-queue:
-						bufout.Write(b)
-					default:
-						bufout.Flush()
-						ticker.Stop()
-						return
-					}
-				}
-			case b := <-queue:
-				bufout.Write(b)
-				ch = ticker.C
-			case <-ch:
-				// flush every 100 microsecond if not flushed before
 				bufout.Flush()
-				ch = nil
+				return
 			}
 		}
 	}()
 	return ss
 }
 
-func (l StreamSink) Handle(e *event.Event) {
-	b := l.formatter.Format(e)
-	l.queue <- b
+func (l *StreamSink) Handle(e *event.Event) {
+	l.bufout.Write(l.formatter.Format(e))
 }

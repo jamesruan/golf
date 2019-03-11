@@ -53,12 +53,20 @@ import (
 )
 
 var (
-	DefaultSink      = DefaultStreamSink(logger.Stderr, text.Console)
-	DefaultPlainSink = DefaultStreamSink(logger.Stderr, text.Plain)
-	DiscardSink      = DefaultStreamSink(logger.Discard, discard.Default)
+	DefaultSink      = NewDirectSink(logger.Stderr, text.Console)
+	DefaultAsyncSink = DefaultStreamSink(logger.Stderr, text.Console)
+
+	DefaultPlainSink      = NewDirectSink(logger.Stderr, text.Plain)
+	DefaultPlainAsyncSink = DefaultStreamSink(logger.Stderr, text.Plain)
+
+	DiscardSink      = NewDirectSink(logger.Discard, discard.Default)
+	DiscardAsyncSink = DefaultStreamSink(logger.Discard, discard.Default)
 )
 
 var (
 	DefaultEntry      = NewTopicEntry("", DefaultSink)
-	DefaultPlainEntry = NewTopicEntry("", DefaultPlainSink)
+	DefaultAsyncEntry = NewTopicEntry("", DefaultAsyncSink)
+
+	DefaultPlainEntry      = NewTopicEntry("", DefaultPlainSink)
+	DefaultPlainAsyncEntry = NewTopicEntry("", DefaultPlainAsyncSink)
 )
