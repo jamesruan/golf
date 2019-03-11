@@ -4,24 +4,12 @@ import (
 	"bufio"
 	"github.com/jamesruan/golf/event"
 	"github.com/jamesruan/golf/logger"
-	"os"
-	"sync"
 	"time"
 )
 
-var sinkWg sync.WaitGroup
-var sinkCloseSignal chan struct{} = make(chan struct{})
-
-// used for signalling the logger to flush and rotate when the logger implements logger.RotateLogger
-var SinkRotateSignal chan os.Signal = make(chan os.Signal, 1)
-
-func closeAllSink() {
-	close(sinkCloseSignal)
-	sinkWg.Wait()
-}
-
 // StreamSink sinks event with Formatter and sink the bytes into bufferred stream
 type StreamSink struct {
+	sinkBase
 	bufout    *bufio.Writer
 	formatter event.Formatter
 	queue     chan []byte
@@ -34,9 +22,14 @@ func DefaultStreamSink(output logger.StreamLogger, formatter event.Formatter) *S
 func NewStreamSink(output logger.StreamLogger, formatter event.Formatter, bufferSize uint, maxDelay time.Duration) *StreamSink {
 	queue := make(chan []byte, bufferSize)
 	bufout := bufio.NewWriter(output)
-	sinkWg.Add(1)
+	ss := &StreamSink{
+		bufout:    bufout,
+		formatter: formatter,
+		queue:     queue,
+	}
+	ss.register()
 	go func() {
-		defer sinkWg.Done()
+		defer ss.deregister()
 		ticker := time.NewTicker(maxDelay)
 		ch := ticker.C
 		for {
@@ -49,7 +42,7 @@ func NewStreamSink(output logger.StreamLogger, formatter event.Formatter, buffer
 						panic(err)
 					}
 				}
-			case <-sinkCloseSignal:
+			case <-ss.closing():
 				for {
 					select {
 					case b := <-queue:
@@ -70,11 +63,7 @@ func NewStreamSink(output logger.StreamLogger, formatter event.Formatter, buffer
 			}
 		}
 	}()
-	return &StreamSink{
-		bufout:    bufout,
-		formatter: formatter,
-		queue:     queue,
-	}
+	return ss
 }
 
 func (l StreamSink) Handle(e *event.Event) {
